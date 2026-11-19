@@ -1,0 +1,87 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: light;
+  --color-fog: #f1f4f5;
+  --color-paper: #ffffff;
+  --color-ink: #11222c;
+  --color-muted: #3e5360;
+  --color-line: #c9d3d8;
+  --color-teal: #0b5d66;
+  --color-saffron: #8f4a00;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    color-scheme: dark;
+    --color-fog: #0e161a;
+    --color-paper: #152028;
+    --color-ink: #e8eef1;
+    --color-muted: #a8b8c0;
+    --color-line: #2a3a42;
+    --color-teal: #3db8c4;
+    --color-saffron: #e09a4a;
+  }
+
+  body {
+    background-color: var(--color-fog);
+    color: var(--color-ink);
+  }
+}
+
+@media (forced-colors: active) {
+  :root {
+    --color-fog: Canvas;
+    --color-paper: Canvas;
+    --color-ink: CanvasText;
+    --color-muted: GrayText;
+    --color-line: ButtonBorder;
+    --color-teal: Highlight;
+    --color-saffron: LinkText;
+  }
+
+  .rounded-control,
+  .rounded-surface {
+    border: 1px solid ButtonBorder;
+  }
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+body {
+  background-color: var(--color-fog);
+  color: var(--color-ink);
+  font-family:
+    system-ui, "Segoe UI", "Nirmala UI", Roboto, "Noto Sans", "Noto Sans Devanagari",
+    "Noto Sans Telugu", sans-serif;
+  font-size: 1.0625rem;
+  line-height: 1.6;
+  text-rendering: optimizeLegibility;
+}
+
+:focus-visible {
+  outline: 3px solid var(--color-teal);
+  outline-offset: 3px;
+}
+
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
+}
