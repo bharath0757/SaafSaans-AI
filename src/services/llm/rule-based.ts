@@ -4,6 +4,7 @@
  */
 
 import type { LLMProvider, PlanInput, PlanOutput, ChatMessage } from "@/services/llm/types";
+import { checkChatScope, getOutOfScopeReply } from "@/domain/scope-guard";
 
 function buildRoutine(input: PlanInput) {
   const { profile, aqi, bestWindow } = input;
@@ -156,8 +157,14 @@ export class RuleBasedPlanner implements LLMProvider {
   }
 
   async *streamChat(messages: ChatMessage[], planContext?: PlanOutput): AsyncIterable<string> {
-    const lastUserMessage = messages[messages.length - 1]?.content.toLowerCase() ?? "";
-    const topicAnswer = resolveTopicReply(lastUserMessage, planContext);
+    const lastUserMessage = messages[messages.length - 1]?.content ?? "";
+    const scope = checkChatScope(lastUserMessage);
+    if (!scope.inScope) {
+      yield getOutOfScopeReply();
+      return;
+    }
+
+    const topicAnswer = resolveTopicReply(lastUserMessage.toLowerCase(), planContext);
     const reply = `I am SaafSaans, your winter smog assistant. ${topicAnswer}`;
 
     for (const word of reply.split(" ")) {

@@ -11,6 +11,59 @@ export type PlanResponse = {
   appliedActions: ActionItem[];
 };
 
+const CACHE_KEY_AQ = "saafsaans_cached_aq";
+const CACHE_KEY_PLAN = "saafsaans_cached_plan";
+
+function loadCachedData(): { aq: AirQualitySummary | null; plan: PlanResponse | null } {
+  if (typeof window === "undefined") return { aq: null, plan: null };
+  try {
+    const rawAq = localStorage.getItem(CACHE_KEY_AQ);
+    const rawPlan = localStorage.getItem(CACHE_KEY_PLAN);
+    const aq = rawAq ? (JSON.parse(rawAq) as AirQualitySummary) : null;
+    const plan = rawPlan ? (JSON.parse(rawPlan) as PlanResponse) : null;
+    if (aq) aq.isStale = true;
+    return { aq, plan };
+  } catch {
+    return { aq: null, plan: null };
+  }
+}
+
+function persistCache(aq: AirQualitySummary, plan: PlanResponse) {
+  if (typeof window === "undefined") return;
+  try {
+    localStorage.setItem(CACHE_KEY_AQ, JSON.stringify(aq));
+    localStorage.setItem(CACHE_KEY_PLAN, JSON.stringify(plan));
+  } catch {
+    // quota exceeded or private mode
+  }
+}
+
+async function fetchDashboard(
+  loc: UserLocation,
+  prof: HouseholdProfile,
+): Promise<{ aq: AirQualitySummary; plan: PlanResponse }> {
+  const aqRes = await fetch(`/api/air-quality?lat=${loc.latitude}&lon=${loc.longitude}`);
+  if (!aqRes.ok) throw new Error("Failed to load air quality data");
+  const aq: AirQualitySummary = await aqRes.json();
+
+  const planRes = await fetch("/api/plan", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      aqi: aq.current.aqi,
+      cityName: loc.name,
+      ambientPm25: aq.current.pm25,
+      bestWindow: aq.bestWindow,
+      profile: prof,
+    }),
+  });
+  if (!planRes.ok) throw new Error("Failed to generate plan");
+  const plan: PlanResponse = await planRes.json();
+
+  persistCache(aq, plan);
+  return { aq, plan };
+}
+
 export function useDashboardData(location: UserLocation, profile: HouseholdProfile) {
   const [airQuality, setAirQuality] = useState<AirQualitySummary | null>(null);
   const [planData, setPlanData] = useState<PlanResponse | null>(null);
@@ -21,44 +74,29 @@ export function useDashboardData(location: UserLocation, profile: HouseholdProfi
   useEffect(() => {
     let ignore = false;
 
-    async function execute() {
+    async function load() {
       try {
-        const aqRes = await fetch(
-          `/api/air-quality?lat=${location.latitude}&lon=${location.longitude}`,
-        );
-        if (!aqRes.ok) throw new Error("Failed to load air quality data");
-        const aqJson: AirQualitySummary = await aqRes.json();
+        const { aq, plan } = await fetchDashboard(location, profile);
         if (ignore) return;
-        setAirQuality(aqJson);
-
-        const planRes = await fetch("/api/plan", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            aqi: aqJson.current.aqi,
-            cityName: location.name,
-            ambientPm25: aqJson.current.pm25,
-            bestWindow: aqJson.bestWindow,
-            profile,
-          }),
-        });
-        if (!planRes.ok) throw new Error("Failed to generate plan");
-        const planJson: PlanResponse = await planRes.json();
-        if (ignore) return;
-        setPlanData(planJson);
+        setAirQuality(aq);
+        setPlanData(plan);
+        setError(null);
       } catch (err) {
-        if (!ignore) {
+        if (ignore) return;
+        const cached = loadCachedData();
+        if (cached.aq && cached.plan) {
+          setAirQuality(cached.aq);
+          setPlanData(cached.plan);
+          setError(null);
+        } else {
           setError(err instanceof Error ? err.message : "An unexpected error occurred");
         }
       } finally {
-        if (!ignore) {
-          setLoading(false);
-        }
+        if (!ignore) setLoading(false);
       }
     }
 
-    void execute();
-
+    void load();
     return () => {
       ignore = true;
     };

@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import Link from "next/link";
 import { t, type Locale } from "@/i18n/dictionaries";
 
 type Props = {
@@ -17,6 +18,8 @@ export function AppShell({ children, locale = "en", headerAction }: Props) {
     tagline: t(locale, "tagline"),
     advice: t(locale, "notMedicalAdvice"),
     attribution: t(locale, "dataAttribution"),
+    today: t(locale, "tabToday"),
+    community: t(locale, "communityActionPack"),
   };
 
   return (
@@ -29,11 +32,24 @@ export function AppShell({ children, locale = "en", headerAction }: Props) {
       </a>
       <header className="border-b border-line bg-paper">
         <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-4">
-          <div>
-            <p className="font-display text-2xl font-semibold tracking-tight text-ink">
-              {dict.brand}
-            </p>
-            <p className="text-sm text-muted">{dict.tagline}</p>
+          <div className="flex items-center gap-6">
+            <Link href="/" className="group">
+              <p className="font-display text-2xl font-semibold tracking-tight text-ink group-hover:text-teal">
+                {dict.brand}
+              </p>
+              <p className="text-sm text-muted">{dict.tagline}</p>
+            </Link>
+            <nav
+              aria-label="Main Navigation"
+              className="hidden items-center gap-4 text-sm font-semibold sm:flex"
+            >
+              <Link href="/" className="text-ink hover:text-teal">
+                {dict.today}
+              </Link>
+              <Link href="/community" className="text-muted hover:text-teal">
+                {dict.community}
+              </Link>
+            </nav>
           </div>
           {headerAction && <div className="flex items-center gap-2">{headerAction}</div>}
         </div>

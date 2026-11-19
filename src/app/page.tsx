@@ -2,6 +2,7 @@
 
 import { useState, useSyncExternalStore } from "react";
 import type { Locale } from "@/i18n/dictionaries";
+import { t } from "@/i18n/dictionaries";
 import { AppShell } from "@/components/AppShell";
 import { LanguageSwitcher } from "@/components/navigation/LanguageSwitcher";
 import { OfflineNotice } from "@/components/feedback/OfflineNotice";
@@ -9,6 +10,7 @@ import { LoadingSkeleton } from "@/components/feedback/LoadingSkeleton";
 import { ErrorState } from "@/components/feedback/ErrorState";
 import { DashboardContent } from "@/components/dashboard/DashboardContent";
 import { OnboardingWizard } from "@/components/onboarding/OnboardingWizard";
+import { ChatDrawer } from "@/components/chat/ChatDrawer";
 import {
   type UserLocation,
   DEFAULT_LOCATION,
@@ -39,11 +41,26 @@ function getStoredLocation(): UserLocation {
   }
 }
 
+function ChatLauncherButton({ locale, onClick }: { locale: Locale; onClick: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-label="Open Air Quality Assistant"
+      className="fixed bottom-6 right-6 z-40 flex items-center gap-2 rounded-full bg-teal px-4 py-3 font-semibold text-paper shadow-lg hover:bg-teal-hover focus:outline-none focus:ring-2 focus:ring-teal print:hidden"
+    >
+      <span aria-hidden="true">💬</span>
+      <span>{t(locale, "askSaafSaans")}</span>
+    </button>
+  );
+}
+
 export default function HomePage() {
   const [locale, setLocale] = useState<Locale>("en");
   const [profile, setProfile] = useState<HouseholdProfile>(getStoredProfile);
   const [location, setLocation] = useState<UserLocation>(getStoredLocation);
   const [showOnboarding, setShowOnboarding] = useState(false);
+  const [isChatOpen, setIsChatOpen] = useState(false);
   const isClient = useSyncExternalStore(
     emptySubscribe,
     () => true,
@@ -83,6 +100,15 @@ export default function HomePage() {
           />
         )
       )}
+
+      <ChatLauncherButton locale={locale} onClick={() => setIsChatOpen(true)} />
+
+      <ChatDrawer
+        isOpen={isChatOpen}
+        onClose={() => setIsChatOpen(false)}
+        locale={locale}
+        planContext={planData?.plan}
+      />
 
       {showOnboarding && (
         <OnboardingWizard
