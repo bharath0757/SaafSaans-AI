@@ -15,26 +15,26 @@ SaafSaans combines live air-quality context (Open-Meteo), a **deterministic Impa
 
 ## Build status
 
-| Phase              | Status      | Notes                                     |
-| ------------------ | ----------- | ----------------------------------------- |
-| 1 Foundation       | Done        | Scaffold, AQI domain, CSP, health API, CI |
-| 2 Impact Engine    | Not started |                                           |
-| 3 Services & API   | Not started |                                           |
-| 4 Experience       | Not started |                                           |
-| 5 Community & chat | Not started |                                           |
-| 6 Hardening        | Not started |                                           |
+| Phase              | Status      | Notes                                                              |
+| ------------------ | ----------- | ------------------------------------------------------------------ |
+| 1 Foundation       | Done        | Scaffold, AQI domain, CSP, health API, CI                          |
+| 2 Impact Engine    | Done        | CPCB breakpoints, IAQ mass balance, exposure dose, actions, impact |
+| 3 Services & API   | Not started |                                                                    |
+| 4 Experience       | Not started |                                                                    |
+| 5 Community & chat | Not started |                                                                    |
+| 6 Hardening        | Not started |                                                                    |
 
 ## Problem-statement traceability
 
-| Requirement                   | Feature                        | File(s)                         | Test                       | Status             |
-| ----------------------------- | ------------------------------ | ------------------------------- | -------------------------- | ------------------ |
-| Suggest low-emission routines | Daily plan (later)             | Phase 3–4                       | —                          | Planned            |
-| Indoor air quality hacks      | Actions catalogue (later)      | Phase 2 `actions.ts`            | —                          | Planned            |
-| Sustainable alternatives      | Transport / fuel swaps (later) | Phase 2 `transport.ts`          | —                          | Planned            |
-| Tailored to location          | Geolocation + geocode (later)  | Phase 3–4                       | —                          | Planned            |
-| Explain direct impact         | Impact Engine + cards          | Phase 2 + 4                     | Phase 2 tests              | Planned            |
-| Right-now verdict             | AQI band + action sentence     | `src/domain/aqi.ts`, `HomeHero` | `tests/domain/aqi.test.ts` | Partial (demo AQI) |
-| Repo &lt; 10 MB               | Size guard                     | `scripts/check-size.mjs`        | `npm run check:size`       | Done               |
+| Requirement                   | Feature                         | File(s)                                                     | Test                                                           | Status             |
+| ----------------------------- | ------------------------------- | ----------------------------------------------------------- | -------------------------------------------------------------- | ------------------ |
+| Suggest low-emission routines | Daily plan actions catalogue    | `src/domain/actions.ts`                                     | `tests/domain/impact.test.ts`                                  | Done (domain)      |
+| Indoor air quality hacks      | Indoor mass-balance + purifiers | `src/domain/indoor.ts`, `src/domain/actions.ts`             | `tests/domain/indoor.test.ts`                                  | Done (domain)      |
+| Sustainable alternatives      | Transport / fuel swaps          | `src/domain/transport.ts`, `src/domain/actions.ts`          | `tests/domain/transport.test.ts`                               | Done (domain)      |
+| Tailored to location          | Geolocation + geocode (later)   | Phase 3–4                                                   | —                                                              | Planned            |
+| Explain direct impact         | Impact Engine (dose + CO2e)     | `src/domain/impact.ts`, `src/domain/exposure.ts`            | `tests/domain/impact.test.ts`, `tests/domain/exposure.test.ts` | Done (domain)      |
+| Right-now verdict             | AQI band + action sentence      | `src/domain/aqi.ts`, `src/domain/pollutants.ts`, `HomeHero` | `tests/domain/aqi.test.ts`, `tests/domain/pollutants.test.ts`  | Done (domain+demo) |
+| Repo &lt; 10 MB               | Size guard                      | `scripts/check-size.mjs`                                    | `npm run check:size`                                           | Done               |
 
 ## How it works
 
@@ -50,7 +50,13 @@ flowchart TB
 
 ## Impact Engine
 
-Phase 2 will publish formulas, assumptions and sources in `docs/ASSUMPTIONS.md`. Phase 1 ships the National AQI band model only — the LLM never invents numbers.
+The Impact Engine is fully deterministic, unit-tested, and property-tested:
+
+- **Pollutant sub-indices ($I_p$):** CPCB linear interpolation table across PM2.5 and PM10 24-hr breakpoints (`src/domain/pollutants.ts`).
+- **Indoor IAQ:** Single-zone steady-state mass-balance equation $C_{in} = \frac{P \cdot a \cdot C_{out} + S/V}{a + k_d + \text{CADR}/V}$ (`src/domain/indoor.ts`).
+- **Inhaled Dose:** Micro-environment activity-weighted intake $\text{Dose} = \sum (C_i / \text{APF}_{\text{mask}} \times \text{Rate} \times \text{Hours})$ (`src/domain/exposure.ts`).
+- **Sustainable Alternatives:** Modal shifts (walk, cycle, 2-wheeler, car, bus, metro) computing PM2.5 exposure deltas and $\text{g CO}_2\text{e/pkm}$ (`src/domain/transport.ts`), and cooking fuel clean transitions (`src/domain/actions.ts`).
+- **All formulas, ranges, and primary sources cited:** [ASSUMPTIONS.md](docs/ASSUMPTIONS.md). The LLM never invents numbers.
 
 ## Features (sample)
 
