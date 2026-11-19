@@ -15,27 +15,27 @@ SaafSaans combines live air-quality context (Open-Meteo), a **deterministic Impa
 
 ## Build status
 
-| Phase              | Status      | Notes                                                              |
-| ------------------ | ----------- | ------------------------------------------------------------------ |
-| 1 Foundation       | Done        | Scaffold, AQI domain, CSP, health API, CI                          |
-| 2 Impact Engine    | Done        | CPCB breakpoints, IAQ mass balance, exposure dose, actions, impact |
-| 3 Services & API   | Done        | Open-Meteo clients, LLMProvider (Gemini/Anthropic/Rule-based), API |
-| 4 Experience       | Not started |                                                                    |
-| 5 Community & chat | Not started |                                                                    |
-| 6 Hardening        | Not started |                                                                    |
+| Phase              | Status      | Notes                                                               |
+| ------------------ | ----------- | ------------------------------------------------------------------- |
+| 1 Foundation       | Done        | Scaffold, AQI domain, CSP, health API, CI                           |
+| 2 Impact Engine    | Done        | CPCB breakpoints, IAQ mass balance, exposure dose, actions, impact  |
+| 3 Services & API   | Done        | Open-Meteo clients, LLMProvider (Gemini/Anthropic/Rule-based), API  |
+| 4 Experience       | Done        | Accessible UI, Onboarding, AQI ladder, 24h strip, Tabs, Impact card |
+| 5 Community & chat | Not started |                                                                     |
+| 6 Hardening        | Not started |                                                                     |
 
 ## Problem-statement traceability
 
-| Requirement                   | Feature                         | File(s)                                                     | Test                                                                     | Status             |
-| ----------------------------- | ------------------------------- | ----------------------------------------------------------- | ------------------------------------------------------------------------ | ------------------ |
-| Suggest low-emission routines | Daily plan generation           | `src/app/api/plan/route.ts`, `src/services/llm/`            | `tests/api/routes.test.ts`, `tests/services/llm.test.ts`                 | Done (API+domain)  |
-| Indoor air quality hacks      | Indoor mass-balance + purifiers | `src/domain/indoor.ts`, `src/domain/actions.ts`             | `tests/domain/indoor.test.ts`                                            | Done (domain)      |
-| Sustainable alternatives      | Transport / fuel swaps          | `src/domain/transport.ts`, `src/domain/actions.ts`          | `tests/domain/transport.test.ts`                                         | Done (domain)      |
-| Tailored to location          | Open-Meteo AQI + Geocoding APIs | `src/services/air-quality.ts`, `src/services/geocoding.ts`  | `tests/services/air-quality.test.ts`, `tests/services/geocoding.test.ts` | Done (API+service) |
-| Explain direct impact         | Impact Engine (dose + CO2e)     | `src/domain/impact.ts`, `src/domain/exposure.ts`            | `tests/domain/impact.test.ts`, `tests/domain/exposure.test.ts`           | Done (domain)      |
-| Follow-up chat                | Scoped streaming chat API       | `src/app/api/chat/route.ts`, `src/services/llm/`            | `tests/api/routes.test.ts`, `tests/services/llm.test.ts`                 | Done (API+service) |
-| Right-now verdict             | AQI band + action sentence      | `src/domain/aqi.ts`, `src/domain/pollutants.ts`, `HomeHero` | `tests/domain/aqi.test.ts`, `tests/domain/pollutants.test.ts`            | Done (API+domain)  |
-| Repo &lt; 10 MB               | Size guard                      | `scripts/check-size.mjs`                                    | `npm run check:size`                                                     | Done               |
+| Requirement                   | Feature                         | File(s)                                                                     | Test                                                                               | Status             |
+| ----------------------------- | ------------------------------- | --------------------------------------------------------------------------- | ---------------------------------------------------------------------------------- | ------------------ |
+| Suggest low-emission routines | Daily plan generation & UI      | `src/components/dashboard/RoutineTab.tsx`, `src/app/api/plan/route.ts`      | `tests/components/PlanTabs.test.tsx`, `tests/api/routes.test.ts`                   | Done               |
+| Indoor air quality hacks      | Indoor mass-balance + purifiers | `src/components/dashboard/IndoorTab.tsx`, `src/domain/indoor.ts`            | `tests/components/PlanTabs.test.tsx`, `tests/domain/indoor.test.ts`                | Done               |
+| Sustainable alternatives      | Transport / fuel swaps          | `src/components/dashboard/SwapsTab.tsx`, `src/domain/transport.ts`          | `tests/components/PlanTabs.test.tsx`, `tests/domain/transport.test.ts`             | Done               |
+| Tailored to location          | Open-Meteo AQI + Geocoding APIs | `src/components/onboarding/StepLocation.tsx`, `src/services/air-quality.ts` | `tests/components/OnboardingWizard.test.tsx`, `tests/services/air-quality.test.ts` | Done               |
+| Explain direct impact         | Impact Engine (dose + CO2e)     | `src/components/dashboard/ImpactCards.tsx`, `src/domain/impact.ts`          | `tests/components/ImpactCards.test.tsx`, `tests/domain/impact.test.ts`             | Done               |
+| Follow-up chat                | Scoped streaming chat API       | `src/app/api/chat/route.ts`, `src/services/llm/`                            | `tests/api/routes.test.ts`, `tests/services/llm.test.ts`                           | Done (API+service) |
+| Right-now verdict             | AQI band + action sentence      | `src/components/dashboard/VerdictHero.tsx`, `src/domain/aqi.ts`             | `tests/components/VerdictHero.test.tsx`, `tests/domain/aqi.test.ts`                | Done               |
+| Repo &lt; 10 MB               | Size guard                      | `scripts/check-size.mjs`                                                    | `npm run check:size`                                                               | Done               |
 
 ## How it works
 
