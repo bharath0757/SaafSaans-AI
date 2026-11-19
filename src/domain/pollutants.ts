@@ -9,6 +9,32 @@
 
 import { type Breakpoint, PM25_BREAKPOINTS, PM10_BREAKPOINTS } from "@/domain/constants";
 
+function linearInterpolate(
+  concentration: number,
+  concLo: number,
+  concHi: number,
+  aqiLo: number,
+  aqiHi: number,
+): number {
+  const cRange = concHi - concLo;
+  if (cRange === 0) return aqiLo;
+  return ((aqiHi - aqiLo) / cRange) * (concentration - concLo) + aqiLo;
+}
+
+function interpolateSegment(
+  concentration: number,
+  bp: Breakpoint,
+  next?: Breakpoint,
+): number | null {
+  if (concentration <= bp.concHi) {
+    return linearInterpolate(concentration, bp.concLo, bp.concHi, bp.aqiLo, bp.aqiHi);
+  }
+  if (next && concentration < next.concLo) {
+    return linearInterpolate(concentration, bp.concHi, next.concLo, bp.aqiHi, next.aqiLo);
+  }
+  return null;
+}
+
 /**
  * Linearly interpolate a sub-index value from concentration using CPCB formula.
  * Returns NaN for negative concentrations.
@@ -21,12 +47,11 @@ export function subIndex(concentration: number, breakpoints: readonly Breakpoint
   if (!last) return NaN;
   if (concentration > last.concHi) return 500;
 
-  for (const bp of breakpoints) {
-    if (concentration >= bp.concLo && concentration <= bp.concHi) {
-      const iRange = bp.aqiHi - bp.aqiLo;
-      const cRange = bp.concHi - bp.concLo;
-      if (cRange === 0) return bp.aqiLo;
-      return (iRange / cRange) * (concentration - bp.concLo) + bp.aqiLo;
+  for (let i = 0; i < breakpoints.length; i++) {
+    const bp = breakpoints[i]!;
+    if (concentration >= bp.concLo) {
+      const result = interpolateSegment(concentration, bp, breakpoints[i + 1]);
+      if (result !== null) return result;
     }
   }
 

@@ -4,12 +4,13 @@ import { t, type Locale } from "@/i18n/dictionaries";
 type Props = {
   children: ReactNode;
   locale?: Locale;
+  headerAction?: ReactNode;
 };
 
 /**
  * Accessible application chrome: skip link, landmark header/footer, main slot.
  */
-export function AppShell({ children, locale = "en" }: Props) {
+export function AppShell({ children, locale = "en", headerAction }: Props) {
   const dict = {
     skip: t(locale, "skipToContent"),
     brand: t(locale, "brand"),
@@ -34,6 +35,7 @@ export function AppShell({ children, locale = "en" }: Props) {
             </p>
             <p className="text-sm text-muted">{dict.tagline}</p>
           </div>
+          {headerAction && <div className="flex items-center gap-2">{headerAction}</div>}
         </div>
       </header>
       <main id="main" className="mx-auto min-h-[70vh] max-w-6xl px-4 py-8">

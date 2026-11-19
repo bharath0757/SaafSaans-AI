@@ -23,6 +23,13 @@ export const tokens = {
     teal: "#3DB8C4",
     saffron: "#E09A4A",
   },
+  highContrast: {
+    border: "ButtonBorder",
+    text: "CanvasText",
+    background: "Canvas",
+    highlight: "Highlight",
+    muted: "GrayText",
+  },
   /**
    * India National AQI bands. Colour + lightness ramp + distinct shape icon name.
    * Never rely on colour alone — always pair with band label and icon.
@@ -115,3 +122,4 @@ export const tokens = {
 
 export type AqiBandKey = keyof typeof tokens.aqi;
 export type TokenColors = typeof tokens.colors;
+export type DarkTokenColors = typeof tokens.dark;

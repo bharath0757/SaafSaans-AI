@@ -11,6 +11,8 @@
   --color-line: #c9d3d8;
   --color-teal: #0b5d66;
   --color-saffron: #8f4a00;
+  --color-contrast-border: transparent;
+  --color-badge-border: rgba(17, 34, 44, 0.15);
 }
 
 @media (prefers-color-scheme: dark) {
@@ -23,6 +25,8 @@
     --color-line: #2a3a42;
     --color-teal: #3db8c4;
     --color-saffron: #e09a4a;
+    --color-contrast-border: #2a3a42;
+    --color-badge-border: rgba(232, 238, 241, 0.25);
   }
 
   body {
@@ -40,12 +44,24 @@
     --color-line: ButtonBorder;
     --color-teal: Highlight;
     --color-saffron: LinkText;
+    --color-contrast-border: ButtonBorder;
+    --color-badge-border: ButtonBorder;
   }
 
   .rounded-control,
   .rounded-surface {
     border: 1px solid ButtonBorder;
   }
+
+  .visualization-bar,
+  .aqi-bar-segment {
+    forced-color-adjust: none;
+    outline: 1px solid ButtonBorder;
+  }
+}
+
+.visualization-bar {
+  forced-color-adjust: none;
 }
 
 html {

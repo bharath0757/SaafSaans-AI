@@ -6,13 +6,15 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        fog: tokens.colors.fog,
-        paper: tokens.colors.paper,
-        ink: tokens.colors.ink,
-        muted: tokens.colors.muted,
-        line: tokens.colors.line,
-        teal: tokens.colors.teal,
-        saffron: tokens.colors.saffron,
+        fog: "var(--color-fog)",
+        paper: "var(--color-paper)",
+        ink: "var(--color-ink)",
+        muted: "var(--color-muted)",
+        line: "var(--color-line)",
+        teal: "var(--color-teal)",
+        saffron: "var(--color-saffron)",
+        "contrast-border": "var(--color-contrast-border)",
+        "badge-border": "var(--color-badge-border)",
         aqi: {
           good: tokens.aqi.good.color,
           satisfactory: tokens.aqi.satisfactory.color,

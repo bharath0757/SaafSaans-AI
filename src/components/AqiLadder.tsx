@@ -37,7 +37,7 @@ export function AqiLadder({ aqi, band, reduceMotion = false }: Props) {
           {bands.map((b) => (
             <div
               key={b.key}
-              className="h-full flex-1"
+              className="visualization-bar h-full flex-1"
               style={{ backgroundColor: b.color }}
               title={`${b.label} ${b.min}–${b.max}`}
             />

@@ -71,6 +71,23 @@ describe("Pollutants - computeAqi and Invariants", () => {
     expect(empty.dominant).toBe("none");
   });
 
+  it("handles floating-point concentrations in integer breakpoint gaps without returning NaN", () => {
+    // PM2.5 gaps
+    expect(pm25SubIndex(30.5)).toBeCloseTo(50.5, 1);
+    expect(pm25SubIndex(60.5)).toBeCloseTo(100.5, 1);
+    expect(pm25SubIndex(90.5)).toBeCloseTo(200.5, 1);
+    expect(pm25SubIndex(120.000008)).toBeCloseTo(300.000008, 4);
+    expect(pm25SubIndex(120.5)).toBeCloseTo(300.5, 1);
+    expect(pm25SubIndex(250.5)).toBeCloseTo(400.5, 1);
+
+    // PM10 gaps
+    expect(pm10SubIndex(50.5)).toBeCloseTo(50.5, 1);
+    expect(pm10SubIndex(100.5)).toBeCloseTo(100.5, 1);
+    expect(pm10SubIndex(250.5)).toBeCloseTo(200.5, 1);
+    expect(pm10SubIndex(350.5)).toBeCloseTo(300.5, 1);
+    expect(pm10SubIndex(430.5)).toBeCloseTo(400.5, 1);
+  });
+
   it("pm25SubIndex is monotonically non-decreasing", () => {
     fc.assert(
       fc.property(
@@ -81,6 +98,21 @@ describe("Pollutants - computeAqi and Invariants", () => {
           return pm25SubIndex(smaller) <= pm25SubIndex(larger);
         },
       ),
+      { numRuns: 1000 },
+    );
+  });
+
+  it("pm10SubIndex is monotonically non-decreasing", () => {
+    fc.assert(
+      fc.property(
+        fc.float({ min: 0, max: 1000, noNaN: true }),
+        fc.float({ min: 0, max: 1000, noNaN: true }),
+        (c1, c2) => {
+          const [smaller, larger] = c1 <= c2 ? [c1, c2] : [c2, c1];
+          return pm10SubIndex(smaller) <= pm10SubIndex(larger);
+        },
+      ),
+      { numRuns: 1000 },
     );
   });
 });

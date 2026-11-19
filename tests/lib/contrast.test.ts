@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { tokens } from "@/design/tokens";
 import { contrastRatio, luminanceDelta, relativeLuminance } from "@/lib/contrast";
 
-describe("design token contrast", () => {
+describe("design token contrast - Light mode", () => {
   it("body ink on fog meets WCAG AA (≥ 4.5:1)", () => {
     expect(contrastRatio(tokens.colors.ink, tokens.colors.fog)).toBeGreaterThanOrEqual(4.5);
   });
@@ -41,5 +41,27 @@ describe("design token contrast", () => {
       relativeLuminance(tokens.aqi.severe.color),
     ];
     expect(luminances[0]!).toBeGreaterThan(luminances[luminances.length - 1]!);
+  });
+});
+
+describe("design token contrast - Dark mode", () => {
+  it("dark mode: ink on fog meets WCAG AAA (≥ 7:1)", () => {
+    expect(contrastRatio(tokens.dark.ink, tokens.dark.fog)).toBeGreaterThanOrEqual(7);
+  });
+
+  it("dark mode: ink on paper meets WCAG AAA (≥ 7:1)", () => {
+    expect(contrastRatio(tokens.dark.ink, tokens.dark.paper)).toBeGreaterThanOrEqual(7);
+  });
+
+  it("dark mode: teal on paper meets WCAG AA for UI text (≥ 4.5:1)", () => {
+    expect(contrastRatio(tokens.dark.teal, tokens.dark.paper)).toBeGreaterThanOrEqual(4.5);
+  });
+
+  it("dark mode: muted on paper meets WCAG AA (≥ 4.5:1)", () => {
+    expect(contrastRatio(tokens.dark.muted, tokens.dark.paper)).toBeGreaterThanOrEqual(4.5);
+  });
+
+  it("dark mode: saffron on paper meets WCAG AA (≥ 4.5:1)", () => {
+    expect(contrastRatio(tokens.dark.saffron, tokens.dark.paper)).toBeGreaterThanOrEqual(4.5);
   });
 });
