@@ -1,6 +1,6 @@
 {
   "name": "saafsaans-ai",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "private": true,
   "description": "GenAI assistant helping families navigate severe winter smog and urban air pollution.",
   "license": "MIT",
@@ -19,6 +19,8 @@
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
     "check:size": "node scripts/check-size.mjs",
+    "check:bundle": "node scripts/check-bundle-size.mjs",
+    "test:e2e": "playwright test",
     "verify": "npm run format:check && npm run lint && npm run typecheck && npm run test:coverage && npm run check:size",
     "prepare": "husky"
   },
@@ -29,9 +31,11 @@
     "zod": "4.6.7"
   },
   "devDependencies": {
+    "@axe-core/playwright": "^4.14.0",
     "@eslint/eslintrc": "^3.3.1",
     "@eslint/js": "^9.39.1",
     "@next/eslint-plugin-next": "16.4.6",
+    "@playwright/test": "^1.65.1",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.3",
     "@testing-library/user-event": "^14.6.1",
@@ -57,6 +61,9 @@
     "typescript-eslint": "^8.48.0",
     "vitest": "^3.2.4",
     "vitest-axe": "^0.1.0"
+  },
+  "overrides": {
+    "tinypool": "^2.1.2"
   },
   "lint-staged": {
     "*.{js,jsx,ts,tsx,mjs,cjs}": [

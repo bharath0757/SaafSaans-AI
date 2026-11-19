@@ -42,15 +42,16 @@ function getStoredLocation(): UserLocation {
 }
 
 function ChatLauncherButton({ locale, onClick }: { locale: Locale; onClick: () => void }) {
+  const label = t(locale, "askSaafSaans");
   return (
     <button
       type="button"
       onClick={onClick}
-      aria-label="Open Air Quality Assistant"
+      aria-label={`${label} — ${t(locale, "chatTitle")}`}
       className="fixed bottom-6 right-6 z-40 flex items-center gap-2 rounded-full bg-teal px-4 py-3 font-semibold text-paper shadow-lg hover:bg-teal-hover focus:outline-none focus:ring-2 focus:ring-teal print:hidden"
     >
       <span aria-hidden="true">💬</span>
-      <span>{t(locale, "askSaafSaans")}</span>
+      <span>{label}</span>
     </button>
   );
 }
