@@ -1,0 +1,23 @@
+{
+  "threshold": 1,
+  "minLines": 5,
+  "minTokens": 50,
+  "reporters": ["console"],
+  "ignore": [
+    "**/node_modules/**",
+    "**/.next/**",
+    "**/coverage/**",
+    "**/tests/**",
+    "**/e2e/**",
+    "**/*.test.ts",
+    "**/*.test.tsx",
+    "**/*.spec.ts",
+    "**/*.spec.tsx",
+    "**/scripts/**",
+    "**/public/**",
+    "**/playwright-report/**",
+    "**/test-results/**",
+    "**/demo-recordings/**"
+  ],
+  "format": ["typescript", "tsx", "css"]
+}

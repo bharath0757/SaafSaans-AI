@@ -1,0 +1,20 @@
+{
+  "$schema": "https://unpkg.com/knip@5/schema.json",
+  "project": ["src/**/*.{ts,tsx,css}", "scripts/**/*.mjs"],
+  "ignore": ["scripts/record-demo.mjs"],
+  "ignoreDependencies": [
+    "postcss-load-config",
+    "lint-staged",
+    "@eslint/eslintrc",
+    "@next/eslint-plugin-next"
+  ],
+  "rules": {
+    "files": "error",
+    "dependencies": "error",
+    "devDependencies": "error",
+    "unlisted": "error",
+    "exports": "error",
+    "types": "error",
+    "duplicates": "error"
+  }
+}
