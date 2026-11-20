@@ -1,16 +1,16 @@
 /**
  * POST /api/chat
  * Streamed air quality follow-up assistant grounded in the user's plan.
- * Enforces strict air quality topic scope guard and rate limits.
  */
 
 import { z } from "zod";
-import { apiRateLimiter, clientKeyFromHeaders } from "@/lib/rate-limit";
-import { AppError, toErrorResponse } from "@/lib/errors";
+import { apiRateLimiter } from "@/lib/rate-limit";
+import { AppError } from "@/lib/errors";
 import { logger } from "@/lib/logger";
 import { getLlmProvider } from "@/services/llm/provider";
 import { planOutputSchema, type PlanOutput, type ChatMessage } from "@/services/llm/types";
 import { checkChatScope, getOutOfScopeReply } from "@/domain/scope-guard";
+import { checkRateLimit, handleRouteError } from "../_lib/api-helpers";
 
 export const dynamic = "force-dynamic";
 
@@ -62,41 +62,29 @@ function createGuardedStream(
 
 export async function POST(request: Request): Promise<Response> {
   try {
-    const key = clientKeyFromHeaders(request.headers);
-    const limit = apiRateLimiter.check(key);
-    if (!limit.allowed) {
-      throw new AppError("RATE_LIMITED", "Too many chat messages. Please wait a moment.", 429);
-    }
-
-    let json: unknown;
-    try {
-      json = await request.json();
-    } catch {
+    const { remaining } = checkRateLimit(
+      request.headers,
+      apiRateLimiter,
+      "Too many chat messages. Please wait a moment.",
+    );
+    const json = await request.json().catch(() => {
       throw new AppError("BAD_REQUEST", "Invalid JSON request body", 400);
-    }
-
+    });
     const parsed = chatRequestSchema.safeParse(json);
     if (!parsed.success) {
       throw new AppError("BAD_REQUEST", parsed.error.issues[0]?.message ?? "Invalid messages", 400);
     }
-
     const stream = createGuardedStream(parsed.data.messages, parsed.data.planContext);
-
     return new Response(stream, {
       status: 200,
       headers: {
         "Content-Type": "text/plain; charset=utf-8",
         "Cache-Control": "no-cache",
         "Transfer-Encoding": "chunked",
-        "X-RateLimit-Remaining": String(limit.remaining),
+        "X-RateLimit-Remaining": String(remaining),
       },
     });
   } catch (error) {
-    if (error instanceof AppError) {
-      return Response.json(toErrorResponse(error), { status: error.status });
-    }
-    logger.error("api_chat_error", { error: String(error) });
-    const internal = new AppError("INTERNAL", "Chat service unavailable", 500);
-    return Response.json(toErrorResponse(internal), { status: 500 });
+    return handleRouteError(error, "api_chat_error", "Chat service unavailable");
   }
 }

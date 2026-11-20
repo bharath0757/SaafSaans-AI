@@ -6,9 +6,12 @@
 import type { LLMProvider, PlanInput, PlanOutput, ChatMessage } from "@/services/llm/types";
 import { checkChatScope, getOutOfScopeReply } from "@/domain/scope-guard";
 
+const MASK_RECOMMENDED_AQI_THRESHOLD = 150;
+const SEVERE_AQI_THRESHOLD = 250;
+
 function buildRoutine(input: PlanInput) {
   const { profile, aqi, bestWindow } = input;
-  const needMask = aqi > 150 || profile.hasRespiratoryCondition;
+  const needMask = aqi > MASK_RECOMMENDED_AQI_THRESHOLD || profile.hasRespiratoryCondition;
 
   const morningAction = profile.hasChildren
     ? "Keep children indoors. Postpone morning outdoor play and school bus stops with a well-fitted mask."
@@ -35,7 +38,7 @@ function buildRoutine(input: PlanInput) {
       activity: "Cleanest outdoor window & ventilation",
       action: `Open windows for 15–20 minutes to refresh indoor air. Complete essential outdoor errands during this cleanest period (avg AQI ~${bestWindow.avgAqi}).`,
       location: "outdoor" as const,
-      maskRecommended: aqi > 250,
+      maskRecommended: aqi > SEVERE_AQI_THRESHOLD,
     },
     {
       timeWindow: "04:00 PM – 08:00 PM",
