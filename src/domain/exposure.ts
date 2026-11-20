@@ -10,7 +10,7 @@
  */
 
 import { INHALATION_RATE } from "@/domain/constants";
-import { maskedConcentration, type Estimate as MaskEstimate } from "@/domain/mask";
+import { maskedConcentration } from "@/domain/mask";
 import { transitPm25 } from "@/domain/transport";
 import type { MaskKey, TransportKey } from "@/domain/constants";
 
@@ -57,11 +57,7 @@ export function computeExposure(
 
   const breakdown = environments.map((env) => {
     const inhalationRate = rates[env.activity];
-    const effectiveConc = maskedConcentration(
-      env.concentration,
-      env.mask,
-      estimate as MaskEstimate,
-    );
+    const effectiveConc = maskedConcentration(env.concentration, env.mask, estimate);
     const dose = effectiveConc * inhalationRate * env.hours;
 
     return {

@@ -8,13 +8,17 @@ import { TRANSPORT, type TransportKey, type TransportSpec } from "@/domain/const
 
 export type Estimate = "low" | "central" | "high";
 
+const DIVISOR_TWO = 2;
+const PERCENT_MULTIPLIER = 100;
+const ZERO_VALUE = 0;
+
 /**
  * Get the transport specification for a given mode.
  */
 export function getTransportSpec(mode: TransportKey): TransportSpec {
   const spec = TRANSPORT[mode];
   if (!spec) {
-    return TRANSPORT.walk!;
+    return TRANSPORT.walk;
   }
   return spec;
 }
@@ -44,28 +48,34 @@ export function transitCo2e(
   return distanceKm * spec.co2ePerPkm[estimate];
 }
 
-/**
- * Compare two transport modes on PM2.5 and CO2e.
- */
-export function compareTransport(
-  ambientPm25: number,
-  distanceKm: number,
-  modeA: TransportKey,
-  modeB: TransportKey,
-  estimate: Estimate = "central",
-): {
+export type TransportComparison = {
   pm25DeltaPct: number;
   co2eDeltaGrams: number;
   betterForPm25: TransportKey;
   betterForCo2e: TransportKey;
-} {
+};
+
+export type CompareTransportParams = {
+  ambientPm25: number;
+  distanceKm: number;
+  modeA: TransportKey;
+  modeB: TransportKey;
+  estimate?: Estimate;
+};
+
+/**
+ * Compare two transport modes on PM2.5 and CO2e.
+ */
+export function compareTransport(params: CompareTransportParams): TransportComparison {
+  const { ambientPm25, distanceKm, modeA, modeB, estimate = "central" } = params;
   const pm25A = transitPm25(ambientPm25, modeA, estimate);
   const pm25B = transitPm25(ambientPm25, modeB, estimate);
   const co2eA = transitCo2e(distanceKm, modeA, estimate);
   const co2eB = transitCo2e(distanceKm, modeB, estimate);
 
-  const pm25Avg = (pm25A + pm25B) / 2;
-  const pm25DeltaPct = pm25Avg > 0 ? ((pm25B - pm25A) / pm25Avg) * 100 : 0;
+  const pm25Avg = (pm25A + pm25B) / DIVISOR_TWO;
+  const pm25DeltaPct =
+    pm25Avg > ZERO_VALUE ? ((pm25B - pm25A) / pm25Avg) * PERCENT_MULTIPLIER : ZERO_VALUE;
 
   return {
     pm25DeltaPct,
@@ -76,14 +86,8 @@ export function compareTransport(
 }
 
 /**
- * List all available transport options with their specs.
+ * Returns a list of all supported transport mode keys.
  */
-export function listTransportModes(): Array<{
-  key: TransportKey;
-  spec: TransportSpec;
-}> {
-  return Object.entries(TRANSPORT).map(([key, spec]) => ({
-    key: key as TransportKey,
-    spec,
-  }));
+export function listTransportModes(): TransportKey[] {
+  return Object.keys(TRANSPORT) as TransportKey[];
 }

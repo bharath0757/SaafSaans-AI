@@ -17,7 +17,7 @@ export type Estimate = "low" | "central" | "high";
 export function getMaskSpec(mask: MaskKey): MaskSpec {
   const spec = MASKS[mask];
   if (!spec) {
-    return MASKS.none!;
+    return MASKS.none;
   }
   return spec;
 }

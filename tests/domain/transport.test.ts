@@ -26,7 +26,13 @@ describe("Transport Mode Model", () => {
   });
 
   it("compares two modes accurately", () => {
-    const comp = compareTransport(200, 15, "car", "metro", "central");
+    const comp = compareTransport({
+      ambientPm25: 200,
+      distanceKm: 15,
+      modeA: "car",
+      modeB: "metro",
+      estimate: "central",
+    });
     expect(comp.betterForPm25).toBe("metro");
     expect(comp.betterForCo2e).toBe("metro");
     expect(comp.co2eDeltaGrams).toBeLessThan(0);

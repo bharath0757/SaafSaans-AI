@@ -7,18 +7,22 @@
  * @see docs/ASSUMPTIONS.md — CPCB breakpoint table
  */
 
-import { type Breakpoint, PM25_BREAKPOINTS, PM10_BREAKPOINTS } from "@/domain/constants";
+import { type Breakpoint, MAX_AQI, PM25_BREAKPOINTS, PM10_BREAKPOINTS } from "@/domain/constants";
 
-function linearInterpolate(
-  concentration: number,
-  concLo: number,
-  concHi: number,
-  aqiLo: number,
-  aqiHi: number,
-): number {
-  const cRange = concHi - concLo;
-  if (cRange === 0) return aqiLo;
-  return ((aqiHi - aqiLo) / cRange) * (concentration - concLo) + aqiLo;
+type Interval = {
+  readonly concLo: number;
+  readonly concHi: number;
+  readonly aqiLo: number;
+  readonly aqiHi: number;
+};
+
+function linearInterpolate(concentration: number, interval: Interval): number {
+  const cRange = interval.concHi - interval.concLo;
+  if (cRange === 0) return interval.aqiLo;
+  return (
+    ((interval.aqiHi - interval.aqiLo) / cRange) * (concentration - interval.concLo) +
+    interval.aqiLo
+  );
 }
 
 function interpolateSegment(
@@ -27,10 +31,15 @@ function interpolateSegment(
   next?: Breakpoint,
 ): number | null {
   if (concentration <= bp.concHi) {
-    return linearInterpolate(concentration, bp.concLo, bp.concHi, bp.aqiLo, bp.aqiHi);
+    return linearInterpolate(concentration, bp);
   }
   if (next && concentration < next.concLo) {
-    return linearInterpolate(concentration, bp.concHi, next.concLo, bp.aqiHi, next.aqiLo);
+    return linearInterpolate(concentration, {
+      concLo: bp.concHi,
+      concHi: next.concLo,
+      aqiLo: bp.aqiHi,
+      aqiHi: next.aqiLo,
+    });
   }
   return null;
 }
@@ -45,7 +54,7 @@ export function subIndex(concentration: number, breakpoints: readonly Breakpoint
   // Clamp to max breakpoint: beyond last Bhi returns 500
   const last = breakpoints[breakpoints.length - 1];
   if (!last) return NaN;
-  if (concentration > last.concHi) return 500;
+  if (concentration > last.concHi) return MAX_AQI;
 
   for (let i = 0; i < breakpoints.length; i++) {
     const bp = breakpoints[i]!;
@@ -90,6 +99,10 @@ export type AqiResult = {
   dominant: "pm25" | "pm10" | "none";
 };
 
+function roundIfFinite(val: number): number {
+  return Number.isFinite(val) ? Math.round(val) : val;
+}
+
 /**
  * Compute the overall National AQI from pollutant concentrations.
  * The overall AQI is the maximum of all available sub-indices.
@@ -98,29 +111,26 @@ export function computeAqi(reading: PollutantReading): AqiResult {
   const pm25SI = reading.pm25 !== undefined ? pm25SubIndex(reading.pm25) : NaN;
   const pm10SI = reading.pm10 !== undefined ? pm10SubIndex(reading.pm10) : NaN;
 
-  const valid: Array<{ key: "pm25" | "pm10"; si: number }> = [];
-  if (Number.isFinite(pm25SI)) valid.push({ key: "pm25", si: pm25SI });
-  if (Number.isFinite(pm10SI)) valid.push({ key: "pm10", si: pm10SI });
+  const hasPm25 = Number.isFinite(pm25SI);
+  const hasPm10 = Number.isFinite(pm10SI);
 
-  if (valid.length === 0) {
+  if (!hasPm25 && !hasPm10) {
     return { aqi: 0, pm25SI, pm10SI, dominant: "none" };
   }
 
-  let dominant: "pm25" | "pm10" = valid[0]!.key;
-  let maxSI = valid[0]!.si;
-
-  for (let i = 1; i < valid.length; i++) {
-    const v = valid[i]!;
-    if (v.si > maxSI) {
-      maxSI = v.si;
-      dominant = v.key;
-    }
+  if (hasPm25 && (!hasPm10 || pm25SI >= pm10SI)) {
+    return {
+      aqi: Math.round(pm25SI),
+      pm25SI: Math.round(pm25SI),
+      pm10SI: roundIfFinite(pm10SI),
+      dominant: "pm25",
+    };
   }
 
   return {
-    aqi: Math.round(maxSI),
-    pm25SI: Number.isFinite(pm25SI) ? Math.round(pm25SI) : pm25SI,
-    pm10SI: Number.isFinite(pm10SI) ? Math.round(pm10SI) : pm10SI,
-    dominant,
+    aqi: Math.round(pm10SI),
+    pm25SI: roundIfFinite(pm25SI),
+    pm10SI: Math.round(pm10SI),
+    dominant: "pm10",
   };
 }

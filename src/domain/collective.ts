@@ -23,22 +23,30 @@ export type CollectiveImpact = {
  */
 const CIGARETTE_EQUIVALENT_DOSE_UG = 220;
 
-/**
- * Typical medium purifier / Corsi-Rosenthal box deliver ~230 m3/h CADR.
- * Assuming 8 hours of active air filtration per day in occupied community zones.
- */
-const DAILY_PURIFIER_VOLUME_M3 = 230 * 8;
+const CADR_M3_PER_HOUR = 230;
+const PURIFIER_ACTIVE_HOURS_PER_DAY = 8;
+const DAILY_PURIFIER_VOLUME_M3 = CADR_M3_PER_HOUR * PURIFIER_ACTIVE_HOURS_PER_DAY;
+const MICROGRAMS_PER_GRAM = 1_000_000;
+const GRAMS_PER_KG = 1000;
+const DECIMAL_PLACES_GRAMS = 2;
+const DECIMAL_PLACES_KG = 1;
+const MIN_HOUSEHOLDS = 1;
+const ZERO_DOSE = 0;
 
 export function computeCollectiveImpact(
   households: number,
   impact: DayImpactSummary | ImpactMetrics,
 ): CollectiveImpact {
-  const safeCount = Math.max(1, Math.floor(households));
+  const safeCount = Math.max(MIN_HOUSEHOLDS, Math.floor(households));
   const metrics: ImpactMetrics = "central" in impact ? impact.central : impact;
 
-  const totalDoseSavedUg = Math.max(0, metrics.doseSavedUg) * safeCount;
-  const totalPm25AvoidedGrams = Number((totalDoseSavedUg / 1_000_000).toFixed(2));
-  const totalCo2eAvoidedKg = Number(((metrics.totalCo2eSavedG * safeCount) / 1000).toFixed(1));
+  const totalDoseSavedUg = Math.max(ZERO_DOSE, metrics.doseSavedUg) * safeCount;
+  const totalPm25AvoidedGrams = Number(
+    (totalDoseSavedUg / MICROGRAMS_PER_GRAM).toFixed(DECIMAL_PLACES_GRAMS),
+  );
+  const totalCo2eAvoidedKg = Number(
+    ((metrics.totalCo2eSavedG * safeCount) / GRAMS_PER_KG).toFixed(DECIMAL_PLACES_KG),
+  );
   const totalCigarettesAvoided = Math.round(totalDoseSavedUg / CIGARETTE_EQUIVALENT_DOSE_UG);
   const cleanAirVolumeM3 = Math.round(DAILY_PURIFIER_VOLUME_M3 * safeCount);
 

@@ -18,12 +18,15 @@ export type AqiBand = {
 
 const BAND_ORDER: AqiBandKey[] = ["good", "satisfactory", "moderate", "poor", "veryPoor", "severe"];
 
+export const MAX_AQI = 500;
+export const MIN_AQI = 0;
+
 /**
  * Clamp an AQI value to the displayable National AQI range.
  */
 export function clampAqi(value: number): number {
-  if (!Number.isFinite(value)) return 0;
-  return Math.min(500, Math.max(0, Math.round(value)));
+  if (!Number.isFinite(value)) return MIN_AQI;
+  return Math.min(MAX_AQI, Math.max(MIN_AQI, Math.round(value)));
 }
 
 /**
@@ -52,7 +55,7 @@ export function isAlertBand(band: AqiBandKey): boolean {
  * Position of an AQI value on the 0–500 ladder as a fraction (0–1).
  */
 export function aqiLadderPosition(aqi: number): number {
-  return clampAqi(aqi) / 500;
+  return clampAqi(aqi) / MAX_AQI;
 }
 
 /**

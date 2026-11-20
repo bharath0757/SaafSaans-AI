@@ -46,6 +46,10 @@ export type ActionItem = {
   readonly source: string;
 };
 
+const AQI_THRESHOLD_MODERATE = 100;
+const AQI_THRESHOLD_POOR = 150;
+const AQI_THRESHOLD_VERY_POOR = 200;
+
 export const ACTIONS: readonly ActionItem[] = [
   {
     id: "shift-outdoor-window",
@@ -55,7 +59,7 @@ export const ACTIONS: readonly ActionItem[] = [
       "Move walks, errands and children's outdoor play to 1:00 PM – 4:00 PM when winter inversion weakens.",
     costBand: "free",
     icon: "sun",
-    isApplicable: (_profile, aqi) => aqi > 100,
+    isApplicable: (_profile, aqi) => aqi > AQI_THRESHOLD_MODERATE,
     modifier: { outdoorHoursReduction: 1.0 },
     explanation:
       "Smog traps pollutants near the ground in morning and night inversions; afternoon solar warming disperses surface PM2.5.",
@@ -69,7 +73,7 @@ export const ACTIONS: readonly ActionItem[] = [
       "Fit a tight-sealing N95/KN95 respirator covering nose and mouth whenever outside.",
     costBand: "low",
     icon: "shield",
-    isApplicable: (profile, aqi) => aqi > 150 && profile.mask !== "n95",
+    isApplicable: (profile, aqi) => aqi > AQI_THRESHOLD_POOR && profile.mask !== "n95",
     modifier: { targetMask: "n95" },
     explanation:
       "Certified N95 media filters ≥95% of fine particulates; real-world assigned protection factor cuts inhaled dose by 80–90%.",
@@ -83,7 +87,7 @@ export const ACTIONS: readonly ActionItem[] = [
       "Use rolled towels, weatherstripping, or tape to block infiltration cracks on external windows.",
     costBand: "low",
     icon: "door",
-    isApplicable: (profile, aqi) => aqi > 200 && profile.homeType === "leaky",
+    isApplicable: (profile, aqi) => aqi > AQI_THRESHOLD_VERY_POOR && profile.homeType === "leaky",
     modifier: { targetHomeType: "sealed" },
     explanation:
       "Reduces air exchange rate from 1.0 h⁻¹ to 0.3 h⁻¹, cutting outdoor particulate infiltration by up to 50%.",
@@ -97,7 +101,7 @@ export const ACTIONS: readonly ActionItem[] = [
       "Operate a certified HEPA cleaner or box-fan MERV-13 filter in your primary bedroom/living room.",
     costBand: "medium",
     icon: "fan",
-    isApplicable: (profile, aqi) => aqi > 150 && profile.purifier === "none",
+    isApplicable: (profile, aqi) => aqi > AQI_THRESHOLD_POOR && profile.purifier === "none",
     modifier: { targetPurifier: "medium" },
     explanation:
       "Adds 230 m³/h clean air delivery rate (CADR), rapidly reducing steady-state indoor PM2.5 concentration.",
@@ -111,7 +115,7 @@ export const ACTIONS: readonly ActionItem[] = [
       "Air out rooms for only 15–20 minutes between 1:00 PM and 3:00 PM; keep windows closed otherwise.",
     costBand: "free",
     icon: "window",
-    isApplicable: (_profile, aqi) => aqi > 200,
+    isApplicable: (_profile, aqi) => aqi > AQI_THRESHOLD_VERY_POOR,
     modifier: { ventilationWindowOnly: true },
     explanation:
       "Prevents high morning and nocturnal PM2.5 from accumulating indoors while allowing necessary CO2 release.",

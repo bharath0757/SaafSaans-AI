@@ -6,9 +6,14 @@
  * @see docs/ASSUMPTIONS.md
  */
 
-import { getCookingFuelSpec, type CookingFuelKey } from "@/domain/constants";
+import { getCookingFuelSpec, type CookingFuelKey, type MaskKey } from "@/domain/constants";
 import { indoorPm25, type IndoorResult } from "@/domain/indoor";
-import { computeExposure, type ExposureResult, type Demographic } from "@/domain/exposure";
+import {
+  computeExposure,
+  type ExposureResult,
+  type Demographic,
+  type MicroEnvironment,
+} from "@/domain/exposure";
 import { transitCo2e } from "@/domain/transport";
 import type { ActionItem, HouseholdProfile, ActionPlanModifier } from "@/domain/actions";
 
@@ -46,27 +51,93 @@ type DaySimulation = {
   cookingCo2e: number;
 };
 
+const COOKING_HOURS_PER_DAY = 1.5;
+const MIN_OUTDOOR_HOURS = 0.5;
+const DEFAULT_OUTDOOR_HOURS = 2.0;
+const COMMUTE_HOURS_PER_DAY = 1.5;
+const TOTAL_HOURS_PER_DAY = 24;
+const MIN_INDOOR_HOURS = 0;
+const PERCENT_MULTIPLIER = 100;
+const ZERO_VALUE = 0;
+
 function resolveDemographic(profile: HouseholdProfile): Demographic {
   if (profile.hasChildren) return "child";
   if (profile.hasElders) return "elder";
   return "adult";
 }
 
+function applyTargetModifiers(target: ActionPlanModifier, source: ActionPlanModifier): void {
+  if (source.targetMask) target.targetMask = source.targetMask;
+  if (source.targetPurifier) target.targetPurifier = source.targetPurifier;
+  if (source.targetHomeType) target.targetHomeType = source.targetHomeType;
+  if (source.targetCommuteMode) target.targetCommuteMode = source.targetCommuteMode;
+}
+
+function applyOtherModifiers(target: ActionPlanModifier, source: ActionPlanModifier): void {
+  if (source.targetCookingFuel) target.targetCookingFuel = source.targetCookingFuel;
+  if (source.outdoorHoursReduction) {
+    target.outdoorHoursReduction = Math.max(
+      target.outdoorHoursReduction ?? ZERO_VALUE,
+      source.outdoorHoursReduction,
+    );
+  }
+  if (source.ventilationWindowOnly) target.ventilationWindowOnly = true;
+}
+
 function mergeModifiers(actions: readonly ActionItem[]): ActionPlanModifier {
-  return actions.reduce<ActionPlanModifier>((acc, action) => {
-    return {
-      targetMask: action.modifier.targetMask ?? acc.targetMask,
-      targetPurifier: action.modifier.targetPurifier ?? acc.targetPurifier,
-      targetHomeType: action.modifier.targetHomeType ?? acc.targetHomeType,
-      targetCommuteMode: action.modifier.targetCommuteMode ?? acc.targetCommuteMode,
-      targetCookingFuel: action.modifier.targetCookingFuel ?? acc.targetCookingFuel,
-      outdoorHoursReduction: Math.max(
-        acc.outdoorHoursReduction ?? 0,
-        action.modifier.outdoorHoursReduction ?? 0,
-      ),
-      ventilationWindowOnly: acc.ventilationWindowOnly || action.modifier.ventilationWindowOnly,
-    };
-  }, {});
+  const acc: ActionPlanModifier = {};
+  for (const action of actions) {
+    applyTargetModifiers(acc, action.modifier);
+    applyOtherModifiers(acc, action.modifier);
+  }
+  return acc;
+}
+
+function computeCookingImpact(fuelKey: CookingFuelKey, tier: EstimateTier) {
+  const cookingSpec = getCookingFuelSpec(fuelKey);
+  const cookingEmission = cookingSpec.pm25EmissionRate[tier];
+  const cookingCo2e = cookingSpec.co2ePerHour[tier] * COOKING_HOURS_PER_DAY;
+  return { cookingEmission, cookingCo2e };
+}
+
+function computeDailyTimeline(outdoorHoursReduction: number) {
+  const outdoorHours = Math.max(MIN_OUTDOOR_HOURS, DEFAULT_OUTDOOR_HOURS - outdoorHoursReduction);
+  const indoorHours = Math.max(
+    MIN_INDOOR_HOURS,
+    TOTAL_HOURS_PER_DAY - outdoorHours - COMMUTE_HOURS_PER_DAY,
+  );
+  return { outdoorHours, indoorHours, commuteHours: COMMUTE_HOURS_PER_DAY };
+}
+
+function buildEnvironments(
+  indoorPm25: number,
+  ambientPm25: number,
+  mask: MaskKey,
+  timeline: { outdoorHours: number; indoorHours: number; commuteHours: number },
+): MicroEnvironment[] {
+  return [
+    {
+      label: "Home",
+      concentration: indoorPm25,
+      hours: timeline.indoorHours,
+      activity: "rest",
+      mask: "none",
+    },
+    {
+      label: "Outdoors",
+      concentration: ambientPm25,
+      hours: timeline.outdoorHours,
+      activity: "moderate",
+      mask,
+    },
+    {
+      label: "Transit",
+      concentration: ambientPm25,
+      hours: timeline.commuteHours,
+      activity: "light",
+      mask,
+    },
+  ];
 }
 
 function simulateDay(
@@ -81,53 +152,16 @@ function simulateDay(
   const mask = modifier.targetMask ?? profile.mask;
   const fuelKey: CookingFuelKey = modifier.targetCookingFuel ?? profile.cookingFuel;
 
-  const cookingSpec = getCookingFuelSpec(fuelKey);
-  const cookingEmission = cookingSpec.pm25EmissionRate[tier];
-  const cookingCo2e = cookingSpec.co2ePerHour[tier] * 1.5; // ~1.5 hours cooking/day
-
+  const { cookingEmission, cookingCo2e } = computeCookingImpact(fuelKey, tier);
   const indoor = indoorPm25(
-    {
-      outdoorPm25: ambientPm25,
-      homeType,
-      purifier,
-      indoorSourceRate: cookingEmission,
-    },
+    { outdoorPm25: ambientPm25, homeType, purifier, indoorSourceRate: cookingEmission },
     tier,
   );
 
-  const outdoorHours = Math.max(0.5, 2.0 - (modifier.outdoorHoursReduction ?? 0));
-  const commuteHours = 1.5;
-  const indoorHours = Math.max(0, 24 - outdoorHours - commuteHours);
-
+  const timeline = computeDailyTimeline(modifier.outdoorHoursReduction ?? ZERO_VALUE);
+  const environments = buildEnvironments(indoor.indoorPm25, ambientPm25, mask, timeline);
   const demographic = resolveDemographic(profile);
-  const exposure = computeExposure(
-    [
-      {
-        label: "Home",
-        concentration: indoor.indoorPm25,
-        hours: indoorHours,
-        activity: "rest",
-        mask: "none",
-      },
-      {
-        label: "Outdoors",
-        concentration: ambientPm25,
-        hours: outdoorHours,
-        activity: "moderate",
-        mask,
-      },
-      {
-        label: "Transit",
-        concentration: ambientPm25,
-        hours: commuteHours,
-        activity: "light",
-        mask,
-      },
-    ],
-    demographic,
-    tier,
-  );
-
+  const exposure = computeExposure(environments, demographic, tier);
   const transportCo2e = transitCo2e(profile.commuteDistanceKm, commuteMode, tier);
 
   return { indoor, exposure, transportCo2e, cookingCo2e };
@@ -142,12 +176,14 @@ function calculateTierMetrics(
   const before = simulateDay(profile, ambientPm25, tier);
   const after = simulateDay(profile, ambientPm25, tier, modifier);
 
-  const doseSavedUg = Math.max(0, before.exposure.totalDose - after.exposure.totalDose);
+  const doseSavedUg = Math.max(ZERO_VALUE, before.exposure.totalDose - after.exposure.totalDose);
   const doseReductionPct =
-    before.exposure.totalDose > 0 ? (doseSavedUg / before.exposure.totalDose) * 100 : 0;
+    before.exposure.totalDose > ZERO_VALUE
+      ? (doseSavedUg / before.exposure.totalDose) * PERCENT_MULTIPLIER
+      : ZERO_VALUE;
 
-  const transportCo2eSavedG = Math.max(0, before.transportCo2e - after.transportCo2e);
-  const cookingCo2eSavedG = Math.max(0, before.cookingCo2e - after.cookingCo2e);
+  const transportCo2eSavedG = Math.max(ZERO_VALUE, before.transportCo2e - after.transportCo2e);
+  const cookingCo2eSavedG = Math.max(ZERO_VALUE, before.cookingCo2e - after.cookingCo2e);
   const totalCo2eSavedG = transportCo2eSavedG + cookingCo2eSavedG;
 
   return {
