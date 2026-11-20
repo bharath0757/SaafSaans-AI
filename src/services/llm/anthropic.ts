@@ -12,7 +12,13 @@ import {
   type ChatMessage,
 } from "@/services/llm/types";
 import { RuleBasedPlanner } from "@/services/llm/rule-based";
-import { SYSTEM_PROMPT, JSON_INDENT, buildPlanPromptContext, parsePlanJson } from "./shared";
+import {
+  SYSTEM_PROMPT,
+  JSON_INDENT,
+  buildPlanPromptContext,
+  parsePlanJson,
+  yieldWords,
+} from "./shared";
 
 const ANTHROPIC_ENDPOINT = "https://api.anthropic.com/v1/messages";
 const ANTHROPIC_VERSION = "2023-06-01";
@@ -20,6 +26,18 @@ const DEFAULT_ANTHROPIC_MODEL = "claude-sonnet-4-20250514";
 const HTTP_OK = 200;
 const MAX_PLAN_TOKENS = 1500;
 const MAX_CHAT_TOKENS = 1024;
+
+async function callAnthropicApi(apiKey: string, payload: unknown) {
+  return safeFetch(ANTHROPIC_ENDPOINT, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "x-api-key": apiKey,
+      "anthropic-version": ANTHROPIC_VERSION,
+    },
+    body: JSON.stringify(payload),
+  });
+}
 
 function parseAnthropicPlanText(text: string): PlanOutput | null {
   try {
@@ -64,15 +82,7 @@ export class AnthropicProvider implements LLMProvider {
     };
 
     try {
-      const { text, status } = await safeFetch(ANTHROPIC_ENDPOINT, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "x-api-key": env.ANTHROPIC_API_KEY,
-          "anthropic-version": ANTHROPIC_VERSION,
-        },
-        body: JSON.stringify(payload),
-      });
+      const { text, status } = await callAnthropicApi(env.ANTHROPIC_API_KEY, payload);
       if (status !== HTTP_OK) return this.fallback.generatePlan(input);
       const parsed = parseAnthropicPlanText(text);
       return parsed ?? this.fallback.generatePlan(input);
@@ -99,15 +109,7 @@ export class AnthropicProvider implements LLMProvider {
     };
 
     try {
-      const { text, status } = await safeFetch(ANTHROPIC_ENDPOINT, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "x-api-key": env.ANTHROPIC_API_KEY,
-          "anthropic-version": ANTHROPIC_VERSION,
-        },
-        body: JSON.stringify(payload),
-      });
+      const { text, status } = await callAnthropicApi(env.ANTHROPIC_API_KEY, payload);
       if (status !== HTTP_OK) {
         yield* this.fallback.streamChat(messages, planContext);
         return;
@@ -117,7 +119,7 @@ export class AnthropicProvider implements LLMProvider {
         yield* this.fallback.streamChat(messages, planContext);
         return;
       }
-      for (const word of reply.split(" ")) yield `${word} `;
+      yield* yieldWords(reply);
     } catch (error) {
       logger.error("anthropic_chat_error", { error: String(error) });
       yield* this.fallback.streamChat(messages, planContext);

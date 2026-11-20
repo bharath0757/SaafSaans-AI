@@ -17,6 +17,86 @@ type Props = {
   onComplete: (profile: HouseholdProfile, location: UserLocation) => void;
 };
 
+function saveToStorage(p: HouseholdProfile, loc: UserLocation) {
+  try {
+    localStorage.setItem("saafsaans_profile", JSON.stringify(p));
+    localStorage.setItem("saafsaans_location", JSON.stringify(loc));
+  } catch {
+    // Ignore localStorage unavailable in SSR / strict sandbox
+  }
+}
+
+function OnboardingHeader({
+  locale,
+  step,
+  canClose,
+  onClose,
+}: {
+  locale: Locale;
+  step: number;
+  canClose: boolean;
+  onClose?: () => void;
+}) {
+  return (
+    <div className="mb-4 flex items-center justify-between border-b border-line pb-3">
+      <div>
+        <h2 id="onboarding-title" className="font-display text-xl font-semibold text-ink">
+          {t(locale, "onboardingTitle")}
+        </h2>
+        <p className="text-xs text-muted">Step {step} of 3</p>
+      </div>
+      {canClose && onClose && (
+        <button
+          type="button"
+          onClick={onClose}
+          aria-label={t(locale, "close")}
+          className="rounded-control p-1 text-muted hover:text-ink focus-visible:outline focus-visible:outline-teal"
+        >
+          ✕
+        </button>
+      )}
+    </div>
+  );
+}
+
+type StepContentProps = {
+  step: number;
+  locale: Locale;
+  location: UserLocation;
+  profile: HouseholdProfile;
+  setLocation: (loc: UserLocation) => void;
+  setProfile: React.Dispatch<React.SetStateAction<HouseholdProfile>>;
+};
+
+function StepContent({
+  step,
+  locale,
+  location,
+  profile,
+  setLocation,
+  setProfile,
+}: StepContentProps) {
+  if (step === 1) {
+    return <StepLocation locale={locale} location={location} onLocationChange={setLocation} />;
+  }
+  if (step === 2) {
+    return (
+      <StepHousehold
+        locale={locale}
+        profile={profile}
+        onChange={(patch) => setProfile((prev) => ({ ...prev, ...patch }))}
+      />
+    );
+  }
+  return (
+    <StepHabits
+      locale={locale}
+      profile={profile}
+      onChange={(patch) => setProfile((prev) => ({ ...prev, ...patch }))}
+    />
+  );
+}
+
 export function OnboardingWizard({
   locale,
   initialProfile = DEFAULT_PROFILE,
@@ -30,12 +110,7 @@ export function OnboardingWizard({
   const [location, setLocation] = useState<UserLocation>(initialLocation);
 
   const handleFinish = (p: HouseholdProfile, loc: UserLocation) => {
-    try {
-      localStorage.setItem("saafsaans_profile", JSON.stringify(p));
-      localStorage.setItem("saafsaans_location", JSON.stringify(loc));
-    } catch {
-      // Ignore localStorage unavailable in SSR / strict sandbox
-    }
+    saveToStorage(p, loc);
     onComplete(p, loc);
   };
 
@@ -47,43 +122,17 @@ export function OnboardingWizard({
       className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-ink/50 p-4"
     >
       <div className="relative w-full max-w-2xl rounded-surface border border-line bg-paper p-6 shadow-xl">
-        <div className="mb-4 flex items-center justify-between border-b border-line pb-3">
-          <div>
-            <h2 id="onboarding-title" className="font-display text-xl font-semibold text-ink">
-              {t(locale, "onboardingTitle")}
-            </h2>
-            <p className="text-xs text-muted">Step {step} of 3</p>
-          </div>
-          {canClose && onClose && (
-            <button
-              type="button"
-              onClick={onClose}
-              aria-label={t(locale, "close")}
-              className="rounded-control p-1 text-muted hover:text-ink focus-visible:outline focus-visible:outline-teal"
-            >
-              ✕
-            </button>
-          )}
-        </div>
+        <OnboardingHeader locale={locale} step={step} canClose={canClose} onClose={onClose} />
 
         <div className="min-h-[220px] py-2">
-          {step === 1 && (
-            <StepLocation locale={locale} location={location} onLocationChange={setLocation} />
-          )}
-          {step === 2 && (
-            <StepHousehold
-              locale={locale}
-              profile={profile}
-              onChange={(patch) => setProfile((prev) => ({ ...prev, ...patch }))}
-            />
-          )}
-          {step === 3 && (
-            <StepHabits
-              locale={locale}
-              profile={profile}
-              onChange={(patch) => setProfile((prev) => ({ ...prev, ...patch }))}
-            />
-          )}
+          <StepContent
+            step={step}
+            locale={locale}
+            location={location}
+            profile={profile}
+            setLocation={setLocation}
+            setProfile={setProfile}
+          />
         </div>
 
         <OnboardingFooter

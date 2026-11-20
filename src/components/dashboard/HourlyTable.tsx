@@ -10,7 +10,56 @@ type Props = {
   locale?: Locale;
 };
 
+function formatTableHour(hour: number): string {
+  const displayHour = hour % 12 === 0 ? 12 : hour % 12;
+  const suffix = hour >= 12 ? "PM" : "AM";
+  return `${displayHour}:00 ${suffix}`;
+}
+
+function isPointInBestWindow(hour: number, bestWindow?: BestOutdoorWindow): boolean {
+  if (!bestWindow) return false;
+  return hour >= bestWindow.startHour && hour <= bestWindow.endHour;
+}
+
+function HourlyTableRow({
+  point,
+  isCleanest,
+  cleanestLabel,
+}: {
+  point: HourlyAqiPoint;
+  isCleanest: boolean;
+  cleanestLabel: string;
+}) {
+  const band = getAqiBand(point.aqi);
+  const hourLabel = formatTableHour(point.hour);
+
+  return (
+    <tr className="border-b border-line/50 hover:bg-fog/30">
+      <td className="p-3 font-medium text-ink">{hourLabel}</td>
+      <td className="p-3 tabular-nums text-ink">{point.aqi}</td>
+      <td className="p-3">
+        <span className="inline-flex items-center gap-1.5 text-ink">
+          <AqiBandIcon band={band.key} className="h-3.5 w-3.5" title={band.label} />
+          <span>{band.label}</span>
+        </span>
+      </td>
+      <td className="p-3 tabular-nums text-muted">{point.pm25}</td>
+      <td className="p-3 text-muted">
+        {isCleanest ? (
+          <span className="rounded-control bg-teal/15 px-2 py-0.5 text-xs font-medium text-teal">
+            {cleanestLabel}
+          </span>
+        ) : (
+          "—"
+        )}
+      </td>
+    </tr>
+  );
+}
+
 export function HourlyTable({ hourly, bestWindow, locale = "en" }: Props) {
+  const cleanestLabel = t(locale, "cleanestWindow");
+
   return (
     <div className="overflow-x-auto rounded-surface border border-line bg-paper">
       <table className="w-full border-collapse text-left text-sm">
@@ -35,38 +84,14 @@ export function HourlyTable({ hourly, bestWindow, locale = "en" }: Props) {
           </tr>
         </thead>
         <tbody>
-          {hourly.map((pt) => {
-            const band = getAqiBand(pt.aqi);
-            const isCleanest =
-              Boolean(bestWindow) &&
-              pt.hour >= (bestWindow?.startHour ?? -1) &&
-              pt.hour <= (bestWindow?.endHour ?? -1);
-            const hourLabel = `${pt.hour % 12 === 0 ? 12 : pt.hour % 12}:00 ${
-              pt.hour >= 12 ? "PM" : "AM"
-            }`;
-            return (
-              <tr key={pt.hour} className="border-b border-line/50 hover:bg-fog/30">
-                <td className="p-3 font-medium text-ink">{hourLabel}</td>
-                <td className="p-3 tabular-nums text-ink">{pt.aqi}</td>
-                <td className="p-3">
-                  <span className="inline-flex items-center gap-1.5 text-ink">
-                    <AqiBandIcon band={band.key} className="h-3.5 w-3.5" title={band.label} />
-                    <span>{band.label}</span>
-                  </span>
-                </td>
-                <td className="p-3 tabular-nums text-muted">{pt.pm25}</td>
-                <td className="p-3 text-muted">
-                  {isCleanest ? (
-                    <span className="rounded-control bg-teal/15 px-2 py-0.5 text-xs font-medium text-teal">
-                      {t(locale, "cleanestWindow")}
-                    </span>
-                  ) : (
-                    "—"
-                  )}
-                </td>
-              </tr>
-            );
-          })}
+          {hourly.map((pt) => (
+            <HourlyTableRow
+              key={pt.hour}
+              point={pt}
+              isCleanest={isPointInBestWindow(pt.hour, bestWindow)}
+              cleanestLabel={cleanestLabel}
+            />
+          ))}
         </tbody>
       </table>
     </div>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useSyncExternalStore } from "react";
+import { useCallback, useState, useSyncExternalStore } from "react";
 import type { Locale } from "@/i18n/dictionaries";
 import { t } from "@/i18n/dictionaries";
 import { AppShell } from "@/components/AppShell";
@@ -17,7 +17,8 @@ import {
   DEFAULT_PROFILE,
 } from "@/components/onboarding/types";
 import type { HouseholdProfile } from "@/domain/actions";
-import { useDashboardData } from "@/hooks/useDashboardData";
+import { useDashboardData, type PlanResponse } from "@/hooks/useDashboardData";
+import type { AirQualitySummary } from "@/services/air-quality";
 
 const emptySubscribe = () => () => {};
 
@@ -56,7 +57,53 @@ function ChatLauncherButton({ locale, onClick }: { locale: Locale; onClick: () =
   );
 }
 
-export default function HomePage() {
+type DashboardViewProps = {
+  isClient: boolean;
+  loading: boolean;
+  error: string | null;
+  airQuality: AirQualitySummary | null;
+  planData: PlanResponse | null;
+  location: UserLocation;
+  locale: Locale;
+  refetch: () => void;
+  onReset: () => void;
+  onOpenOnboarding: () => void;
+};
+
+function DashboardView({
+  isClient,
+  loading,
+  error,
+  airQuality,
+  planData,
+  location,
+  locale,
+  refetch,
+  onReset,
+  onOpenOnboarding,
+}: DashboardViewProps) {
+  if (!isClient || (loading && !airQuality)) {
+    return <LoadingSkeleton locale={locale} />;
+  }
+  if (error && !airQuality) {
+    return (
+      <ErrorState message={error} locale={locale} onRetry={refetch} onResetToDefault={onReset} />
+    );
+  }
+  if (!airQuality) return null;
+  return (
+    <DashboardContent
+      airQuality={airQuality}
+      planData={planData}
+      locationName={location.name}
+      locale={locale}
+      onEditLocation={onOpenOnboarding}
+      onEditRoutine={onOpenOnboarding}
+    />
+  );
+}
+
+function useHomeState() {
   const [locale, setLocale] = useState<Locale>("en");
   const [profile, setProfile] = useState<HouseholdProfile>(getStoredProfile);
   const [location, setLocation] = useState<UserLocation>(getStoredLocation);
@@ -68,61 +115,81 @@ export default function HomePage() {
     () => false,
   );
 
-  const { airQuality, planData, loading, error, refetch } = useDashboardData(location, profile);
+  const handleReset = useCallback(() => {
+    setLocation(DEFAULT_LOCATION);
+    setProfile(DEFAULT_PROFILE);
+  }, []);
+
+  const handleOnboardingComplete = useCallback(
+    (newProfile: HouseholdProfile, newLoc: UserLocation) => {
+      setProfile(newProfile);
+      setLocation(newLoc);
+      setShowOnboarding(false);
+    },
+    [],
+  );
+
+  return {
+    locale,
+    setLocale,
+    profile,
+    location,
+    showOnboarding,
+    setShowOnboarding,
+    isChatOpen,
+    setIsChatOpen,
+    isClient,
+    handleReset,
+    handleOnboardingComplete,
+  };
+}
+
+export default function HomePage() {
+  const state = useHomeState();
+  const { airQuality, planData, loading, error, refetch } = useDashboardData(
+    state.location,
+    state.profile,
+  );
 
   return (
     <AppShell
-      locale={locale}
-      headerAction={<LanguageSwitcher currentLocale={locale} onLocaleChange={setLocale} />}
+      locale={state.locale}
+      headerAction={
+        <LanguageSwitcher currentLocale={state.locale} onLocaleChange={state.setLocale} />
+      }
     >
-      <OfflineNotice locale={locale} />
+      <OfflineNotice locale={state.locale} />
 
-      {!isClient || (loading && !airQuality) ? (
-        <LoadingSkeleton locale={locale} />
-      ) : error && !airQuality ? (
-        <ErrorState
-          message={error}
-          locale={locale}
-          onRetry={refetch}
-          onResetToDefault={() => {
-            setLocation(DEFAULT_LOCATION);
-            setProfile(DEFAULT_PROFILE);
-          }}
-        />
-      ) : (
-        airQuality && (
-          <DashboardContent
-            airQuality={airQuality}
-            planData={planData}
-            locationName={location.name}
-            locale={locale}
-            onEditLocation={() => setShowOnboarding(true)}
-            onEditRoutine={() => setShowOnboarding(true)}
-          />
-        )
-      )}
+      <DashboardView
+        isClient={state.isClient}
+        loading={loading}
+        error={error}
+        airQuality={airQuality}
+        planData={planData}
+        location={state.location}
+        locale={state.locale}
+        refetch={refetch}
+        onReset={state.handleReset}
+        onOpenOnboarding={() => state.setShowOnboarding(true)}
+      />
 
-      <ChatLauncherButton locale={locale} onClick={() => setIsChatOpen(true)} />
+      <ChatLauncherButton locale={state.locale} onClick={() => state.setIsChatOpen(true)} />
 
       <ChatDrawer
-        isOpen={isChatOpen}
-        onClose={() => setIsChatOpen(false)}
-        locale={locale}
+        isOpen={state.isChatOpen}
+        onClose={() => state.setIsChatOpen(false)}
+        locale={state.locale}
         planContext={planData?.plan}
       />
 
-      {showOnboarding && (
+      {state.showOnboarding && (
         <OnboardingWizard
-          locale={locale}
-          initialProfile={profile}
-          initialLocation={location}
+          locale={state.locale}
+          initialProfile={state.profile}
+          initialLocation={state.location}
           canClose={Boolean(airQuality)}
-          onClose={() => setShowOnboarding(false)}
-          onComplete={(newProfile, newLoc) => {
-            setProfile(newProfile);
-            setLocation(newLoc);
-            setShowOnboarding(false);
-          }}
+          onClose={() => state.setShowOnboarding(false)}
+          onComplete={state.handleOnboardingComplete}
         />
       )}
     </AppShell>

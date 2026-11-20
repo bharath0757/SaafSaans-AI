@@ -8,9 +8,17 @@ type Props = {
   onChange: (patch: Partial<HouseholdProfile>) => void;
 };
 
-export function HomeEquipmentFields({ locale, profile, onChange }: Props) {
+function HomeTypeAndPurifier({
+  locale,
+  profile,
+  onChange,
+}: {
+  locale: Locale;
+  profile: HouseholdProfile;
+  onChange: (patch: Partial<HouseholdProfile>) => void;
+}) {
   return (
-    <div className="space-y-4">
+    <>
       <div>
         <label htmlFor="home-type" className="block text-sm font-medium text-ink">
           {t(locale, "homeTypeLabel")}
@@ -42,7 +50,21 @@ export function HomeEquipmentFields({ locale, profile, onChange }: Props) {
           <option value="large">{t(locale, "purifierLarge")}</option>
         </select>
       </div>
+    </>
+  );
+}
 
+function MaskAndBudget({
+  locale,
+  profile,
+  onChange,
+}: {
+  locale: Locale;
+  profile: HouseholdProfile;
+  onChange: (patch: Partial<HouseholdProfile>) => void;
+}) {
+  return (
+    <>
       <div>
         <label htmlFor="mask-select" className="block text-sm font-medium text-ink">
           {t(locale, "maskLabel")}
@@ -76,6 +98,15 @@ export function HomeEquipmentFields({ locale, profile, onChange }: Props) {
           <option value="high">{t(locale, "budgetHigh")}</option>
         </select>
       </div>
+    </>
+  );
+}
+
+export function HomeEquipmentFields({ locale, profile, onChange }: Props) {
+  return (
+    <div className="space-y-4">
+      <HomeTypeAndPurifier locale={locale} profile={profile} onChange={onChange} />
+      <MaskAndBudget locale={locale} profile={profile} onChange={onChange} />
     </div>
   );
 }

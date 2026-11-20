@@ -33,25 +33,35 @@ const geocodingResponseSchema = z.object({
     .optional(),
 });
 
-const geocodeCache = new TtlCache<GeocodedCity[]>(24 * 60 * 60 * 1000); // 24 hours
+const MS_PER_SECOND = 1000;
+const SECONDS_PER_MINUTE = 60;
+const MINUTES_PER_HOUR = 60;
+const HOURS_PER_DAY = 24;
+const GEOCODE_CACHE_TTL_MS = HOURS_PER_DAY * MINUTES_PER_HOUR * SECONDS_PER_MINUTE * MS_PER_SECOND;
+const MIN_SEARCH_QUERY_LENGTH = 2;
+const HTTP_STATUS_OK = 200;
+const HTTP_STATUS_BAD_GATEWAY = 502;
+const MAX_SEARCH_RESULTS_COUNT = 5;
+
+const geocodeCache = new TtlCache<GeocodedCity[]>(GEOCODE_CACHE_TTL_MS);
 
 /**
  * Search cities by text query.
  */
 export async function searchCities(query: string): Promise<GeocodedCity[]> {
   const clean = query.trim().toLowerCase();
-  if (clean.length < 2) return [];
+  if (clean.length < MIN_SEARCH_QUERY_LENGTH) return [];
 
   const cached = geocodeCache.get(clean);
   if (cached) return cached.value;
 
   const encoded = encodeURIComponent(clean);
-  const url = `https://geocoding-api.open-meteo.com/v1/search?name=${encoded}&count=5&language=en&format=json`;
+  const url = `https://geocoding-api.open-meteo.com/v1/search?name=${encoded}&count=${MAX_SEARCH_RESULTS_COUNT}&language=en&format=json`;
 
   try {
     const { text, status } = await safeFetch(url);
-    if (status !== 200) {
-      throw new AppError("UPSTREAM", "Failed to search cities", 502);
+    if (status !== HTTP_STATUS_OK) {
+      throw new AppError("UPSTREAM", "Failed to search cities", HTTP_STATUS_BAD_GATEWAY);
     }
 
     const raw = JSON.parse(text);
@@ -70,6 +80,11 @@ export async function searchCities(query: string): Promise<GeocodedCity[]> {
     return results;
   } catch (error) {
     if (error instanceof AppError) throw error;
-    throw new AppError("UPSTREAM", "Failed to communicate with geocoding service", 502, error);
+    throw new AppError(
+      "UPSTREAM",
+      "Failed to communicate with geocoding service",
+      HTTP_STATUS_BAD_GATEWAY,
+      error,
+    );
   }
 }

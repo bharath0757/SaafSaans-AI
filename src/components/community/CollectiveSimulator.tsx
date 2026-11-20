@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import type { CollectiveImpact } from "@/domain/collective";
 
 type Props = {
@@ -5,6 +6,59 @@ type Props = {
   impact: CollectiveImpact;
   onChangeHouseholds: (n: number) => void;
 };
+
+function MetricCard({
+  title,
+  value,
+  unit,
+  caption,
+}: {
+  title: string;
+  value: ReactNode;
+  unit: string;
+  caption: string;
+}) {
+  return (
+    <div className="rounded-control border border-line bg-paper p-3 print:border-ink">
+      <p className="text-xs font-semibold text-muted print:text-ink">{title}</p>
+      <p className="mt-1 font-mono text-xl font-bold text-ink sm:text-2xl">
+        {value} <span className="text-sm font-normal">{unit}</span>
+      </p>
+      <p className="mt-0.5 text-xs text-muted print:text-ink">{caption}</p>
+    </div>
+  );
+}
+
+function CollectiveMetricGrid({ impact }: { impact: CollectiveImpact }) {
+  return (
+    <div className="mt-6 grid grid-cols-2 gap-4 sm:grid-cols-4 print:mt-4">
+      <MetricCard
+        title="PM2.5 Avoided"
+        value={impact.totalPm25AvoidedGrams}
+        unit="grams/day"
+        caption="🛡️ Inhaled particulate mass"
+      />
+      <MetricCard
+        title="Cigarette Equiv."
+        value={impact.totalCigarettesAvoided}
+        unit="avoided/day"
+        caption="🚭 Berkeley Earth model"
+      />
+      <MetricCard
+        title="CO2e Emissions"
+        value={impact.totalCo2eAvoidedKg}
+        unit="kg saved"
+        caption="🌱 Transit & fuel swaps"
+      />
+      <MetricCard
+        title="Clean Air Delivered"
+        value={impact.cleanAirVolumeM3.toLocaleString()}
+        unit="m³"
+        caption="💨 Filtered zone volume"
+      />
+    </div>
+  );
+}
 
 export function CollectiveSimulator({ households, impact, onChangeHouseholds }: Props) {
   return (
@@ -38,40 +92,7 @@ export function CollectiveSimulator({ households, impact, onChangeHouseholds }: 
         </div>
       </div>
 
-      <div className="mt-6 grid grid-cols-2 gap-4 sm:grid-cols-4 print:mt-4">
-        <div className="rounded-control border border-line bg-paper p-3 print:border-ink">
-          <p className="text-xs font-semibold text-muted print:text-ink">PM2.5 Avoided</p>
-          <p className="mt-1 font-mono text-xl font-bold text-ink sm:text-2xl">
-            {impact.totalPm25AvoidedGrams} <span className="text-sm font-normal">grams/day</span>
-          </p>
-          <p className="mt-0.5 text-xs text-muted print:text-ink">🛡️ Inhaled particulate mass</p>
-        </div>
-
-        <div className="rounded-control border border-line bg-paper p-3 print:border-ink">
-          <p className="text-xs font-semibold text-muted print:text-ink">Cigarette Equiv.</p>
-          <p className="mt-1 font-mono text-xl font-bold text-ink sm:text-2xl">
-            {impact.totalCigarettesAvoided} <span className="text-sm font-normal">avoided/day</span>
-          </p>
-          <p className="mt-0.5 text-xs text-muted print:text-ink">🚭 Berkeley Earth model</p>
-        </div>
-
-        <div className="rounded-control border border-line bg-paper p-3 print:border-ink">
-          <p className="text-xs font-semibold text-muted print:text-ink">CO2e Emissions</p>
-          <p className="mt-1 font-mono text-xl font-bold text-ink sm:text-2xl">
-            {impact.totalCo2eAvoidedKg} <span className="text-sm font-normal">kg saved</span>
-          </p>
-          <p className="mt-0.5 text-xs text-muted print:text-ink">🌱 Transit & fuel swaps</p>
-        </div>
-
-        <div className="rounded-control border border-line bg-paper p-3 print:border-ink">
-          <p className="text-xs font-semibold text-muted print:text-ink">Clean Air Delivered</p>
-          <p className="mt-1 font-mono text-xl font-bold text-ink sm:text-2xl">
-            {impact.cleanAirVolumeM3.toLocaleString()}{" "}
-            <span className="text-sm font-normal">m³</span>
-          </p>
-          <p className="mt-0.5 text-xs text-muted print:text-ink">💨 Filtered zone volume</p>
-        </div>
-      </div>
+      <CollectiveMetricGrid impact={impact} />
     </section>
   );
 }

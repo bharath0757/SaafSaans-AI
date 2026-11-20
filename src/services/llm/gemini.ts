@@ -12,7 +12,13 @@ import {
   type ChatMessage,
 } from "@/services/llm/types";
 import { RuleBasedPlanner } from "@/services/llm/rule-based";
-import { SYSTEM_PROMPT, JSON_INDENT, buildPlanPromptContext, parsePlanJson } from "./shared";
+import {
+  SYSTEM_PROMPT,
+  JSON_INDENT,
+  buildPlanPromptContext,
+  parsePlanJson,
+  yieldWords,
+} from "./shared";
 
 const HTTP_OK = 200;
 const DEFAULT_GEMINI_MODEL = "gemini-2.0-flash";
@@ -46,9 +52,9 @@ interface GeminiResponse {
 }
 
 function extractFirstPartText(data: GeminiResponse): string | null {
-  const parts = data.candidates?.[0]?.content?.parts;
-  if (!parts || parts.length === 0) return null;
-  return parts[0].text ?? null;
+  const firstCandidate = data.candidates?.[0];
+  const firstPart = firstCandidate?.content?.parts?.[0];
+  return firstPart?.text ?? null;
 }
 
 function parseGeminiPlanText(text: string): PlanOutput | null {
@@ -125,7 +131,7 @@ export class GeminiProvider implements LLMProvider {
         yield* this.fallback.streamChat(messages, planContext);
         return;
       }
-      for (const word of reply.split(" ")) yield `${word} `;
+      yield* yieldWords(reply);
     } catch (error) {
       logger.error("gemini_chat_error", { error: String(error) });
       yield* this.fallback.streamChat(messages, planContext);

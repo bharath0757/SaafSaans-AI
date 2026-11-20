@@ -55,3 +55,10 @@ export function parsePlanJson(
     return null;
   }
 }
+
+export async function* yieldWords(text: string): AsyncIterable<string> {
+  const words = text.split(" ");
+  for (const word of words) {
+    yield `${word} `;
+  }
+}

@@ -22,21 +22,11 @@ const INITIAL_MESSAGE: MessageItem = {
     "Namaste! I am SaafSaans, your winter smog assistant. Ask me anything about today's AQI, respirator fit, or building a DIY Corsi-Rosenthal clean air box.",
 };
 
-export function ChatDrawer({ isOpen, onClose, locale, planContext }: Props) {
+function useChatMessages(planContext?: PlanOutput) {
   const [messages, setMessages] = useState<MessageItem[]>([INITIAL_MESSAGE]);
   const [isStreaming, setIsStreaming] = useState(false);
 
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape" && isOpen) onClose();
-    };
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [isOpen, onClose]);
-
-  if (!isOpen) return null;
-
-  const handleSend = async (content: string) => {
+  const sendMessage = async (content: string) => {
     const userMsg: MessageItem = { id: `u-${Date.now()}`, role: "user", content };
     const assistantMsgId = `a-${Date.now()}`;
     const initialAssistant: MessageItem = {
@@ -72,6 +62,51 @@ export function ChatDrawer({ isOpen, onClose, locale, planContext }: Props) {
     }
   };
 
+  return { messages, isStreaming, sendMessage };
+}
+
+function ChatDrawerHeader({
+  title,
+  closeLabel,
+  onClose,
+}: {
+  title: string;
+  closeLabel: string;
+  onClose: () => void;
+}) {
+  return (
+    <div className="flex items-center justify-between border-b border-line px-4 py-3">
+      <div className="flex items-center gap-2">
+        <span aria-hidden="true" className="text-xl">
+          🍃
+        </span>
+        <h2 className="font-display font-semibold text-ink">{title}</h2>
+      </div>
+      <button
+        type="button"
+        onClick={onClose}
+        aria-label={closeLabel}
+        className="rounded-control p-1.5 text-muted hover:bg-surface hover:text-ink focus:outline-none focus:ring-2 focus:ring-teal"
+      >
+        ✕
+      </button>
+    </div>
+  );
+}
+
+export function ChatDrawer({ isOpen, onClose, locale, planContext }: Props) {
+  const { messages, isStreaming, sendMessage } = useChatMessages(planContext);
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape" && isOpen) onClose();
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [isOpen, onClose]);
+
+  if (!isOpen) return null;
+
   return (
     <div className="fixed inset-0 z-50 flex justify-end">
       <div
@@ -85,25 +120,14 @@ export function ChatDrawer({ isOpen, onClose, locale, planContext }: Props) {
         aria-modal="true"
         className="relative z-10 flex h-full w-full max-w-md flex-col bg-paper shadow-2xl"
       >
-        <div className="flex items-center justify-between border-b border-line px-4 py-3">
-          <div className="flex items-center gap-2">
-            <span aria-hidden="true" className="text-xl">
-              🍃
-            </span>
-            <h2 className="font-display font-semibold text-ink">{t(locale, "chatTitle")}</h2>
-          </div>
-          <button
-            type="button"
-            onClick={onClose}
-            aria-label={t(locale, "chatClose")}
-            className="rounded-control p-1.5 text-muted hover:bg-surface hover:text-ink focus:outline-none focus:ring-2 focus:ring-teal"
-          >
-            ✕
-          </button>
-        </div>
+        <ChatDrawerHeader
+          title={t(locale, "chatTitle")}
+          closeLabel={t(locale, "chatClose")}
+          onClose={onClose}
+        />
         <ChatMessageList messages={messages} />
-        <ChatSuggestedPrompts onSelectPrompt={handleSend} disabled={isStreaming} />
-        <ChatInputForm locale={locale} disabled={isStreaming} onSend={handleSend} />
+        <ChatSuggestedPrompts onSelectPrompt={sendMessage} disabled={isStreaming} />
+        <ChatInputForm locale={locale} disabled={isStreaming} onSend={sendMessage} />
       </div>
     </div>
   );

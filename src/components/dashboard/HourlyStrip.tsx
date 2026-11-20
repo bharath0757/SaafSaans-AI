@@ -11,8 +11,15 @@ type Props = {
   locale?: Locale;
 };
 
-export function HourlyStrip({ hourly, bestWindow, locale = "en" }: Props) {
-  const [showTable, setShowTable] = useState(false);
+function HourlyScrollContainer({
+  hourly,
+  bestWindow,
+  locale,
+}: {
+  hourly: HourlyAqiPoint[];
+  bestWindow?: BestOutdoorWindow;
+  locale: Locale;
+}) {
   const containerRef = useRef<HTMLDivElement>(null);
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
@@ -22,6 +29,29 @@ export function HourlyStrip({ hourly, bestWindow, locale = "en" }: Props) {
       containerRef.current?.scrollBy({ left: -150, behavior: "smooth" });
     }
   };
+
+  return (
+    <div
+      ref={containerRef}
+      tabIndex={0}
+      role="toolbar"
+      aria-label={t(locale, "hourlyForecast")}
+      onKeyDown={handleKeyDown}
+      className="flex gap-2.5 overflow-x-auto pb-2 pt-1 focus-visible:outline focus-visible:outline-2 focus-visible:outline-teal"
+    >
+      {hourly.map((pt) => {
+        const isCleanest =
+          Boolean(bestWindow) &&
+          pt.hour >= (bestWindow?.startHour ?? -1) &&
+          pt.hour <= (bestWindow?.endHour ?? -1);
+        return <HourlyCard key={pt.hour} point={pt} isCleanest={isCleanest} />;
+      })}
+    </div>
+  );
+}
+
+export function HourlyStrip({ hourly, bestWindow, locale = "en" }: Props) {
+  const [showTable, setShowTable] = useState(false);
 
   return (
     <section aria-labelledby="hourly-forecast-heading" className="space-y-4">
@@ -50,22 +80,7 @@ export function HourlyStrip({ hourly, bestWindow, locale = "en" }: Props) {
       {showTable ? (
         <HourlyTable hourly={hourly} bestWindow={bestWindow} locale={locale} />
       ) : (
-        <div
-          ref={containerRef}
-          tabIndex={0}
-          role="toolbar"
-          aria-label={t(locale, "hourlyForecast")}
-          onKeyDown={handleKeyDown}
-          className="flex gap-2.5 overflow-x-auto pb-2 pt-1 focus-visible:outline focus-visible:outline-2 focus-visible:outline-teal"
-        >
-          {hourly.map((pt) => {
-            const isCleanest =
-              Boolean(bestWindow) &&
-              pt.hour >= (bestWindow?.startHour ?? -1) &&
-              pt.hour <= (bestWindow?.endHour ?? -1);
-            return <HourlyCard key={pt.hour} point={pt} isCleanest={isCleanest} />;
-          })}
-        </div>
+        <HourlyScrollContainer hourly={hourly} bestWindow={bestWindow} locale={locale} />
       )}
     </section>
   );

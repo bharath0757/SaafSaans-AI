@@ -13,6 +13,8 @@ import { CommunityHeader } from "@/components/community/CommunityHeader";
 import { CollectiveSimulator } from "@/components/community/CollectiveSimulator";
 import { CommunityActionCards } from "@/components/community/CommunityActionCards";
 import { VulnerableRegistry } from "@/components/community/VulnerableRegistry";
+import type { AirQualitySummary } from "@/services/air-quality";
+import type { DayImpactSummary } from "@/domain/impact";
 
 const FALLBACK_METRICS = {
   indoorPm25Before: 180,
@@ -30,15 +32,19 @@ const FALLBACK_METRICS = {
   totalCo2eSavedG: 700,
 };
 
+function resolveCommunityMetrics(airQuality: AirQualitySummary | null, impact?: DayImpactSummary) {
+  const aqi = airQuality ? airQuality.current.aqi : 280;
+  const band = airQuality ? airQuality.current.band.label : "Poor";
+  const metrics = impact ? impact.central : FALLBACK_METRICS;
+  return { aqi, band, metrics };
+}
+
 export default function CommunityPage() {
   const [locale, setLocale] = useState<Locale>("en");
   const [households, setHouseholds] = useState(50);
 
   const { airQuality, planData } = useDashboardData(DEFAULT_LOCATION, DEFAULT_PROFILE);
-
-  const aqi = airQuality?.current.aqi ?? 280;
-  const band = airQuality?.current.band?.label ?? "Poor";
-  const metrics = planData?.impact?.central ?? FALLBACK_METRICS;
+  const { aqi, band, metrics } = resolveCommunityMetrics(airQuality, planData?.impact);
   const collective = computeCollectiveImpact(households, metrics);
 
   return (

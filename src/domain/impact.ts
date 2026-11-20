@@ -66,14 +66,18 @@ function resolveDemographic(profile: HouseholdProfile): Demographic {
   return "adult";
 }
 
-function applyTargetModifiers(target: ActionPlanModifier, source: ActionPlanModifier): void {
+type MutableModifier = {
+  -readonly [K in keyof ActionPlanModifier]?: ActionPlanModifier[K];
+};
+
+function applyTargetModifiers(target: MutableModifier, source: ActionPlanModifier): void {
   if (source.targetMask) target.targetMask = source.targetMask;
   if (source.targetPurifier) target.targetPurifier = source.targetPurifier;
   if (source.targetHomeType) target.targetHomeType = source.targetHomeType;
   if (source.targetCommuteMode) target.targetCommuteMode = source.targetCommuteMode;
 }
 
-function applyOtherModifiers(target: ActionPlanModifier, source: ActionPlanModifier): void {
+function applyOtherModifiers(target: MutableModifier, source: ActionPlanModifier): void {
   if (source.targetCookingFuel) target.targetCookingFuel = source.targetCookingFuel;
   if (source.outdoorHoursReduction) {
     target.outdoorHoursReduction = Math.max(
@@ -85,7 +89,7 @@ function applyOtherModifiers(target: ActionPlanModifier, source: ActionPlanModif
 }
 
 function mergeModifiers(actions: readonly ActionItem[]): ActionPlanModifier {
-  const acc: ActionPlanModifier = {};
+  const acc: MutableModifier = {};
   for (const action of actions) {
     applyTargetModifiers(acc, action.modifier);
     applyOtherModifiers(acc, action.modifier);
